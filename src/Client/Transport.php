@@ -233,12 +233,14 @@ final class Transport
         ];
     }
 
+    private const MAX_RETRY_AFTER_SECONDS = 60.0;
+
     private function backoffSeconds(int $attempt, ?ResponseInterface $response): float
     {
         if ($response !== null) {
-            $retryAfter = $response->getHeaderLine('Retry-After');
-            if ($retryAfter !== '' && is_numeric($retryAfter)) {
-                return (float) $retryAfter;
+            $retryAfter = self::retryAfterSeconds($response->getHeaderLine('Retry-After'));
+            if ($retryAfter !== null) {
+                return min($retryAfter, self::MAX_RETRY_AFTER_SECONDS);
             }
         }
 
@@ -246,6 +248,29 @@ final class Transport
         $jitter = (mt_rand(0, 100) / 1000);
 
         return $base + $jitter;
+    }
+
+    /**
+     * Parse a Retry-After header value: either delta-seconds or an RFC 7231
+     * HTTP-date. Returns null when absent or unparseable; never negative.
+     */
+    private static function retryAfterSeconds(string $value): ?float
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return max(0.0, (float) $value);
+        }
+
+        $when = \DateTimeImmutable::createFromFormat(\DateTimeInterface::RFC7231, $value);
+        if ($when === false) {
+            return null;
+        }
+
+        return max(0.0, (float) ($when->getTimestamp() - time()));
     }
 
     /**
