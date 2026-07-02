@@ -265,7 +265,9 @@ final class Transport
             return max(0.0, (float) $value);
         }
 
-        $when = \DateTimeImmutable::createFromFormat(\DateTimeInterface::RFC7231, $value);
+        // RFC 7231 IMF-fixdate; HTTP-dates are always GMT. The literal format
+        // avoids DateTimeInterface::RFC7231, deprecated in PHP 8.5.
+        $when = \DateTimeImmutable::createFromFormat('D, d M Y H:i:s \G\M\T', $value, new \DateTimeZone('UTC'));
         if ($when === false) {
             return null;
         }
