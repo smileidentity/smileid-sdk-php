@@ -321,7 +321,7 @@ The SDK retries idempotent operations only: status and services reads, and its i
 
 ## Telemetry
 
-Every request carries three headers identifying the SDK: `SmileID-Source-SDK: php`, `SmileID-Source-SDK-Version`, and a `User-Agent` of the form `smileid-sdk-php/<version> (PHP/<php-version>)`. They are observability metadata, never authentication, and carry no personal data.
+Every request carries three headers identifying the SDK: `SmileID-Source-SDK: php`, `SmileID-Source-SDK-Version`, and a `User-Agent` of the form `smileid-sdk-php/<version> (php/<php-version>)`. They are observability metadata, never authentication, and carry no personal data.
 
 ## HMAC request signing
 

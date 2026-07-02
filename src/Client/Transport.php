@@ -229,7 +229,7 @@ final class Transport
         return [
             'SmileID-Source-SDK' => 'php',
             'SmileID-Source-SDK-Version' => Version::VERSION,
-            'User-Agent' => sprintf('smileid-sdk-php/%s (PHP/%s)', Version::VERSION, PHP_VERSION),
+            'User-Agent' => sprintf('smileid-sdk-php/%s (php/%s)', Version::VERSION, PHP_VERSION),
         ];
     }
 

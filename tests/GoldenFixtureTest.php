@@ -63,7 +63,7 @@ final class GoldenFixtureTest extends TestCase
         self::assertNotSame('', $request->getHeaderLine('SmileID-Token'));
         self::assertSame('php', $request->getHeaderLine('SmileID-Source-SDK'));
         self::assertSame(Version::VERSION, $request->getHeaderLine('SmileID-Source-SDK-Version'));
-        self::assertStringStartsWith('smileid-sdk-php/' . Version::VERSION . ' (PHP/', $request->getHeaderLine('User-Agent'));
+        self::assertStringStartsWith('smileid-sdk-php/' . Version::VERSION . ' (php/', $request->getHeaderLine('User-Agent'));
         self::assertSame('user_01h8x9y2z3a4b5c6d7e8f9g0h1', $request->getHeaderLine('User-ID'));
         self::assertFalse($request->hasHeader('SmileID-Partner-ID'));
 
