@@ -346,7 +346,9 @@ final class Operations
             if ($value === null) {
                 continue;
             }
-            $parts[] = BinaryInput::coerce($value)->toMultipartPart($field, $field . '.jpg', 'image/jpeg');
+            // document/document_back may be image/jpeg or image/png; the rest are jpeg only.
+            $allowPng = $field === 'document' || $field === 'document_back';
+            $parts[] = BinaryInput::coerce($value)->toMultipartPart($field, $field . '.jpg', 'image/jpeg', $allowPng);
         }
 
         return $parts;

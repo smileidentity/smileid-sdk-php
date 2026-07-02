@@ -85,10 +85,22 @@ final class BinaryInput
     /**
      * Build a Guzzle multipart entry for this binary input.
      *
+     * When $allowPng is true (document/document_back, per the spec encoding
+     * block) the content type flips to image/png if the filename ends in .png
+     * or the bytes carry the PNG signature. All other image fields are
+     * image/jpeg only.
+     *
      * @return array{name: string, contents: string|resource, filename: string, headers: array<string, string>}
      */
-    public function toMultipartPart(string $name, string $defaultFilename, string $contentType): array
+    public function toMultipartPart(string $name, string $defaultFilename, string $contentType, bool $allowPng = false): array
     {
+        if ($allowPng && $this->looksLikePng()) {
+            $contentType = 'image/png';
+            if ($this->filename === null && str_ends_with($defaultFilename, '.jpg')) {
+                $defaultFilename = substr($defaultFilename, 0, -4) . '.png';
+            }
+        }
+
         $contents = match ($this->mode) {
             self::MODE_PATH => $this->openFile((string) $this->value),
             self::MODE_RESOURCE => $this->value,
@@ -101,6 +113,27 @@ final class BinaryInput
             'filename' => $this->filename ?? $defaultFilename,
             'headers' => ['Content-Type' => $contentType],
         ];
+    }
+
+    private const PNG_SIGNATURE = "\x89PNG\r\n\x1a\n";
+
+    private function looksLikePng(): bool
+    {
+        if ($this->filename !== null && str_ends_with(strtolower($this->filename), '.png')) {
+            return true;
+        }
+
+        if ($this->mode === self::MODE_BYTES) {
+            return str_starts_with((string) $this->value, self::PNG_SIGNATURE);
+        }
+        if ($this->mode === self::MODE_PATH) {
+            $head = @file_get_contents((string) $this->value, false, null, 0, 8);
+
+            return $head !== false && $head === self::PNG_SIGNATURE;
+        }
+
+        // Streams are not sniffed (they may not be seekable); rely on filename.
+        return false;
     }
 
     /**
