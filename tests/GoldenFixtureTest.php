@@ -572,4 +572,27 @@ final class GoldenFixtureTest extends TestCase
         $override->client->services->bankCodes();
         self::assertSame('https://api.smileidentity.com/v3/services/bank_codes', (string) $override->request(0)->getUri());
     }
+
+    public function testPngDocumentGetsPngContentType(): void
+    {
+        $mock = new MockClient([MockClient::tokenResponse(), MockClient::acceptedResponse('accepted')]);
+
+        $mock->client->documents->verify(
+            selfieImage: BinaryInput::fromString(self::FAKE_JPEG, 'selfie.jpg'),
+            livenessImages: $this->livenessImages(),
+            document: BinaryInput::fromString("\x89PNG\r\n\x1a\nfake-png", 'doc.png'),
+            documentBack: BinaryInput::fromString("\x89PNG\r\n\x1a\nfake-png-back"),
+            consent: $this->consent(),
+            country: 'NG',
+            userDetails: $this->userDetails(),
+        );
+
+        $parts = MultipartParser::parse($mock->request(1));
+
+        // Filename extension signals PNG; raw PNG bytes are sniffed too.
+        self::assertSame('image/png', MultipartParser::named($parts, 'document')[0]['contentType']);
+        self::assertSame('image/png', MultipartParser::named($parts, 'document_back')[0]['contentType']);
+        // Selfie and liveness stay JPEG-only per the spec encoding block.
+        self::assertSame('image/jpeg', MultipartParser::named($parts, 'selfie_image')[0]['contentType']);
+    }
 }
