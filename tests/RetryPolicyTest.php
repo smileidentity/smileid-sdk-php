@@ -61,6 +61,50 @@ final class RetryPolicyTest extends TestCase
         self::assertSame([7.0], $mock->sleeps);
     }
 
+    public function testRetryAfterHttpDateFormIsHonoured(): void
+    {
+        $httpDate = gmdate('D, d M Y H:i:s \G\M\T', time() + 10);
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new Response(429, ['Retry-After' => $httpDate], '{"status":"Too Many Requests","message":"slow down"}'),
+            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+        ]);
+
+        $mock->client->verifications->retrieve('job_1');
+
+        self::assertCount(1, $mock->sleeps);
+        // Allow for up to a couple of seconds of clock movement during the test.
+        self::assertGreaterThanOrEqual(8.0, $mock->sleeps[0]);
+        self::assertLessThanOrEqual(10.0, $mock->sleeps[0]);
+    }
+
+    public function testRetryAfterInThePastFloorsToZero(): void
+    {
+        $httpDate = gmdate('D, d M Y H:i:s \G\M\T', time() - 30);
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new Response(429, ['Retry-After' => $httpDate], '{"status":"Too Many Requests","message":"slow down"}'),
+            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+        ]);
+
+        $mock->client->verifications->retrieve('job_1');
+
+        self::assertSame([0.0], $mock->sleeps);
+    }
+
+    public function testRetryAfterIsCappedAtSixtySeconds(): void
+    {
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new Response(429, ['Retry-After' => '300'], '{"status":"Too Many Requests","message":"slow down"}'),
+            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+        ]);
+
+        $mock->client->verifications->retrieve('job_1');
+
+        self::assertSame([60.0], $mock->sleeps);
+    }
+
     public function testRetriesStopAtMaxRetriesAndRaise(): void
     {
         $mock = new MockClient([
