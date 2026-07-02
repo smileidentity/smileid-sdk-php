@@ -36,7 +36,13 @@ final class EnhancedKycE2ETest extends TestCase
             country: 'NG',
             idType: 'NIN',
             idNumber: '12345678901',
-            userDetails: ['given_names' => 'John', 'last_name' => 'Doe', 'email' => 'john@example.com'],
+            // The sandbox only accepts recognized test identities, matched on
+            // given_names + last_name + email.
+            userDetails: [
+                'given_names' => 'Amina Fatou',
+                'last_name' => 'Clearwater',
+                'email' => 'amina.clearwater@example.com',
+            ],
             consent: Consent::granted(
                 grantedAt: new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
                 noticeLanguage: 'EN',
