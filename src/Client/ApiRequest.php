@@ -8,7 +8,7 @@ namespace SmileIdentity\Client;
  * A language-neutral description of one wire request, produced by the
  * generated operation functions and consumed by {@see Transport}.
  *
- * The transport layer owns auth, telemetry, signing, and retries; this object
+ * The transport layer owns auth, telemetry, and retries; this object
  * only carries what is specific to the operation.
  */
 final class ApiRequest

@@ -43,7 +43,6 @@ final class MockClient
             partnerId: $config['partnerId'] ?? '1234',
             apiKey: $config['apiKey'] ?? 'test-api-key',
             environment: $config['environment'] ?? 'sandbox',
-            partnerSecret: $config['partnerSecret'] ?? null,
             defaultCallbackUrl: $config['defaultCallbackUrl'] ?? null,
             baseUrl: $config['baseUrl'] ?? null,
             timeout: $config['timeout'] ?? 30.0,

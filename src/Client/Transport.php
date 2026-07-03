@@ -9,7 +9,6 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\MultipartStream;
 use Psr\Http\Message\ResponseInterface;
-use SmileIdentity\Client\Auth\HmacSigner;
 use SmileIdentity\Client\Auth\TokenManager;
 use SmileIdentity\Errors\AuthenticationError;
 use SmileIdentity\Errors\ConnectionError;
@@ -18,16 +17,15 @@ use SmileIdentity\Errors\UnexpectedResponseError;
 use SmileIdentity\Version;
 
 /**
- * The single layer that touches HTTP (§2.2). Attaches auth + telemetry, signs
- * when enabled, serializes the body (§5.3), sends, retries idempotent ops
- * (§2.6), and turns failures into typed errors (§7).
+ * The single layer that touches HTTP (§2.2). Attaches auth + telemetry,
+ * serializes the body (§5.3), sends, retries idempotent ops (§2.6), and turns
+ * failures into typed errors (§7).
  */
 final class Transport
 {
     private const RETRYABLE_STATUSES = [408, 429, 500, 502, 503, 504];
 
     private readonly TokenManager $tokenManager;
-    private readonly ?HmacSigner $signer;
     /** @var \Closure(float): void */
     private readonly \Closure $sleeper;
 
@@ -36,9 +34,6 @@ final class Transport
         private readonly ClientInterface $httpClient,
         ?\Closure $sleeper = null,
     ) {
-        $this->signer = $config->hmacEnabled()
-            ? new HmacSigner((string) $config->partnerSecret)
-            : null;
         $this->sleeper = $sleeper ?? static function (float $seconds): void {
             if ($seconds > 0) {
                 usleep((int) ($seconds * 1_000_000));
@@ -140,10 +135,6 @@ final class Transport
             $encoded = json_encode($request->jsonBody ?? [], JSON_UNESCAPED_SLASHES);
             $body = $encoded === false ? '{}' : $encoded;
             $headers['Content-Type'] = 'application/json';
-        }
-
-        if ($this->signer !== null) {
-            $headers = array_merge($headers, $this->signer->headers($body ?? ''));
         }
 
         return [$headers, $body];

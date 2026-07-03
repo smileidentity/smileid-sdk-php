@@ -14,9 +14,9 @@ use SmileIdentity\Helpers\Multipart;
  * Thin per-operation functions (§3). Each maps typed params to their wire
  * destinations, builds an {@see ApiRequest}, and sends it through the transport.
  *
- * This is the layer a generator would own later; it holds no auth, retry, or
- * signing logic (that lives in the hand-written client/ tree) and never renames
- * a wire field.
+ * This is the layer a generator would own later; it holds no auth or retry
+ * logic (that lives in the hand-written client/ tree) and never renames a
+ * wire field.
  *
  * @phpstan-type ScalarMap array<string, bool|int|float|string>
  * @phpstan-type EntryArgs array{

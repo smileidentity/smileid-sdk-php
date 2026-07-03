@@ -67,10 +67,6 @@ final class GoldenFixtureTest extends TestCase
         self::assertSame('user_01h8x9y2z3a4b5c6d7e8f9g0h1', $request->getHeaderLine('User-ID'));
         self::assertFalse($request->hasHeader('SmileID-Partner-ID'));
 
-        // HMAC is OFF by default.
-        self::assertFalse($request->hasHeader('SmileID-Timestamp'));
-        self::assertFalse($request->hasHeader('SmileID-Request-Signature'));
-
         $parts = MultipartParser::parse($request);
 
         $country = MultipartParser::named($parts, 'country');
@@ -528,32 +524,6 @@ final class GoldenFixtureTest extends TestCase
 
         $parts = MultipartParser::parse($mock->request(1));
         self::assertSame('https://app.example.com/cb', MultipartParser::named($parts, 'callback_url')[0]['body']);
-    }
-
-    public function testHmacHeadersWhenPartnerSecretIsSet(): void
-    {
-        $mock = new MockClient(
-            [MockClient::tokenResponse(), MockClient::acceptedResponse()],
-            ['partnerSecret' => 'secret-key'],
-        );
-
-        $mock->client->enhancedKyc->verify(
-            country: 'NG',
-            idType: 'NIN',
-            idNumber: '12345678901',
-            userDetails: $this->userDetails(),
-            consent: $this->consent(),
-        );
-
-        $request = $mock->request(1);
-        $timestamp = $request->getHeaderLine('SmileID-Timestamp');
-        $signature = $request->getHeaderLine('SmileID-Request-Signature');
-
-        self::assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/', $timestamp);
-        self::assertSame(
-            hash_hmac('sha256', $timestamp . (string) $request->getBody(), 'secret-key'),
-            $signature,
-        );
     }
 
     public function testProductionEnvironmentAndBaseUrlOverride(): void
