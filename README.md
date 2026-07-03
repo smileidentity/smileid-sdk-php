@@ -1,4 +1,4 @@
-# smile-identity/core
+# smileid/smileid
 
 ![Packagist version](https://img.shields.io/badge/packagist-unreleased-lightgrey)
 ![CI status](https://img.shields.io/badge/CI-pending-lightgrey)
@@ -16,7 +16,7 @@ This project is under active development. It's not yet published to Packagist, a
 ## Install
 
 ```bash
-composer require smile-identity/core
+composer require smileid/smileid
 ```
 
 ## Create a client
