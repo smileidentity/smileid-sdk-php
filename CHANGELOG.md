@@ -26,13 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Set the SDK version to 12.0.0, aligning the server SDKs with the V12 mobile
   SDKs.
 
-### Removed
-
-- Removed `partnerSecret` and HMAC request signing entirely (product
-  decision): the provisional signer was never confirmed with the backend and
-  confused partners. Request signing may be reintroduced if a signing
-  contract is agreed.
-
 ### Added
 
 - Initial implementation of the Smile ID V3 server-side SDK: all 14 public
