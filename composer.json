@@ -1,5 +1,5 @@
 {
-    "name": "smileid/smileid",
+    "name": "smileid/usesmileid",
     "description": "Official Smile ID server-side SDK for PHP.",
     "type": "library",
     "license": "MIT",

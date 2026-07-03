@@ -1,4 +1,4 @@
-# smileid/smileid
+# smileid/usesmileid
 
 ![Packagist version](https://img.shields.io/badge/packagist-unreleased-lightgrey)
 ![CI status](https://img.shields.io/badge/CI-pending-lightgrey)
@@ -16,7 +16,7 @@ This project is under active development. It's not yet published to Packagist, a
 ## Install
 
 ```bash
-composer require smileid/smileid
+composer require smileid/usesmileid
 ```
 
 ## Create a client
