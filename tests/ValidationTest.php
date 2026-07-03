@@ -6,6 +6,7 @@ namespace SmileIdentity\Tests;
 
 use PHPUnit\Framework\TestCase;
 use SmileIdentity\Consent;
+use SmileIdentity\Errors\UnexpectedResponseError;
 use SmileIdentity\Errors\ValidationError;
 use SmileIdentity\Tests\Support\MockClient;
 use SmileIdentity\Tests\Support\MultipartParser;
@@ -155,6 +156,36 @@ final class ValidationTest extends TestCase
         self::assertCount(0, $mock->history);
     }
 
+    public function testLivenessImageCountMustBeSixToEight(): void
+    {
+        $mock = new MockClient([]);
+
+        $this->expectException(ValidationError::class);
+        $mock->client->documents->verify(
+            selfieImage: 'selfie',
+            livenessImages: ['1', '2', '3', '4', '5'],
+            document: 'document',
+            consent: $this->consent(),
+            country: 'NG',
+            userDetails: ['given_names' => 'John', 'last_name' => 'Doe', 'email' => 'john@example.com'],
+        );
+    }
+
+    public function testCallbackUrlMustUseHttps(): void
+    {
+        $mock = new MockClient([]);
+
+        $this->expectException(ValidationError::class);
+        $mock->client->enhancedKyc->verify(
+            country: 'NG',
+            idType: 'NIN',
+            idNumber: '12345678901',
+            userDetails: ['given_names' => 'John', 'last_name' => 'Doe', 'email' => 'john@example.com'],
+            consent: $this->consent(),
+            callbackUrl: 'http://partner.example.com/webhook',
+        );
+    }
+
     public function testCompareRejectsInvalidComparisonImageType(): void
     {
         $mock = new MockClient([]);
@@ -179,6 +210,57 @@ final class ValidationTest extends TestCase
     {
         $this->expectException(ValidationError::class);
         new \SmileIdentity\Client(partnerId: '1234', apiKey: 'key', environment: 'staging');
+    }
+
+    public function testConfigRejectsUnsafeBaseUrl(): void
+    {
+        $this->expectException(ValidationError::class);
+        new \SmileIdentity\Client(partnerId: '1234', apiKey: 'key', baseUrl: 'http://api.example.com');
+    }
+
+    public function testConfigAllowsExplicitInsecureLoopbackBaseUrl(): void
+    {
+        $client = new \SmileIdentity\Client(
+            partnerId: '1234',
+            apiKey: 'key',
+            baseUrl: 'http://localhost:8080',
+            allowInsecureBaseUrl: true,
+        );
+
+        self::assertSame('http://localhost:8080', $client->config->baseUrl);
+    }
+
+    public function testConfigRejectsInsecureDefaultCallbackUrl(): void
+    {
+        $this->expectException(ValidationError::class);
+        new \SmileIdentity\Client(
+            partnerId: '1234',
+            apiKey: 'key',
+            defaultCallbackUrl: 'http://partner.example.com/webhook',
+        );
+    }
+
+    public function testSuccessfulMalformedJsonRaisesUnexpectedResponse(): void
+    {
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new \GuzzleHttp\Psr7\Response(202, ['X-Request-ID' => 'req_123'], '<html>not json</html>'),
+        ]);
+
+        try {
+            $mock->client->enhancedKyc->verify(
+                country: 'NG',
+                idType: 'NIN',
+                idNumber: '12345678901',
+                userDetails: ['given_names' => 'John', 'last_name' => 'Doe', 'email' => 'john@example.com'],
+                consent: $this->consent(),
+            );
+            self::fail('Expected UnexpectedResponseError');
+        } catch (UnexpectedResponseError $e) {
+            self::assertSame(202, $e->statusCode);
+            self::assertSame('req_123', $e->requestId);
+            self::assertSame('<html>not json</html>', $e->rawBody);
+        }
     }
 
     public function testConsentBuilderSetsGrantedTrueAndValidatesLanguage(): void

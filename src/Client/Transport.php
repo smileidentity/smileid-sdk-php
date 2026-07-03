@@ -14,6 +14,7 @@ use SmileIdentity\Client\Auth\TokenManager;
 use SmileIdentity\Errors\AuthenticationError;
 use SmileIdentity\Errors\ConnectionError;
 use SmileIdentity\Errors\ErrorFactory;
+use SmileIdentity\Errors\UnexpectedResponseError;
 use SmileIdentity\Version;
 
 /**
@@ -84,7 +85,7 @@ final class Transport
             $raw = (string) $response->getBody();
 
             if (($status >= 200 && $status < 300) || in_array($status, $nonErrorStatuses, true)) {
-                return self::decode($raw);
+                return self::decode($raw, $status, self::lowercaseHeaders($response));
             }
 
             if ($status === 401 && $request->authenticated && !$refreshedOn401) {
@@ -202,7 +203,7 @@ final class Transport
             $raw = (string) $response->getBody();
 
             if ($status >= 200 && $status < 300) {
-                $data = self::decode($raw);
+                $data = self::decode($raw, $status, self::lowercaseHeaders($response));
                 $token = $data['token'] ?? null;
                 if (!is_string($token) || $token === '') {
                     throw new AuthenticationError('Token endpoint returned no token.', statusCode: $status, rawBody: $raw);
@@ -296,14 +297,27 @@ final class Transport
     /**
      * @return array<string, mixed>
      */
-    private static function decode(string $raw): array
+    /**
+     * @param array<string, string> $headers
+     *
+     * @return array<string, mixed>
+     */
+    private static function decode(string $raw, int $statusCode, array $headers): array
     {
         if ($raw === '') {
             return [];
         }
         $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            throw new UnexpectedResponseError(
+                'Expected a JSON object response.',
+                statusCode: $statusCode,
+                requestId: $headers['x-request-id'] ?? $headers['x-smileid-request-id'] ?? null,
+                rawBody: $raw,
+            );
+        }
 
-        return is_array($decoded) ? $decoded : [];
+        return $decoded;
     }
 
     /**

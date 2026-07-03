@@ -11,6 +11,7 @@ use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\BinaryInput;
 use SmileIdentity\Helpers\UserDetails;
+use SmileIdentity\Helpers\Validation;
 
 /**
  * documents.verify → POST /v3/document_verification
@@ -131,11 +132,14 @@ final class DocumentsResource
         ?string $userId,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Validation::livenessImages($livenessImages);
+        $resolvedCallbackUrl = $callbackUrl ?? $this->config->defaultCallbackUrl;
+        Validation::callbackUrl($resolvedCallbackUrl);
 
         $data = Operations::documentVerification($this->transport, [
             'country' => $country,
             'id_type' => $idType,
-            'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
+            'callback_url' => $resolvedCallbackUrl,
             'selfie_image' => $selfieImage,
             'document' => $document,
             'document_back' => $documentBack,

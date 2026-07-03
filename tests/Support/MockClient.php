@@ -46,6 +46,7 @@ final class MockClient
             partnerSecret: $config['partnerSecret'] ?? null,
             defaultCallbackUrl: $config['defaultCallbackUrl'] ?? null,
             baseUrl: $config['baseUrl'] ?? null,
+            allowInsecureBaseUrl: $config['allowInsecureBaseUrl'] ?? false,
             timeout: $config['timeout'] ?? 30.0,
             maxRetries: $config['maxRetries'] ?? 2,
             httpClient: $guzzle,

@@ -11,6 +11,7 @@ use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\BinaryInput;
 use SmileIdentity\Helpers\UserDetails;
+use SmileIdentity\Helpers\Validation;
 
 /** biometric_kyc.verify → POST /v3/biometric_kyc (requires SmileID-Partner-ID header). */
 final class BiometricKycResource
@@ -43,13 +44,16 @@ final class BiometricKycResource
         ?string $userId = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Validation::livenessImages($livenessImages);
+        $resolvedCallbackUrl = $callbackUrl ?? $this->config->defaultCallbackUrl;
+        Validation::callbackUrl($resolvedCallbackUrl);
 
         $data = Operations::biometricKyc($this->transport, [
             'country' => $country,
             'id_type' => $idType,
             'id_number' => $idNumber,
             'sandbox_result' => $sandboxResult,
-            'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
+            'callback_url' => $resolvedCallbackUrl,
             'selfie_image' => $selfieImage,
             'liveness_images' => $livenessImages,
             'user_details' => $userDetails,

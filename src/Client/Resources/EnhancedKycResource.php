@@ -10,6 +10,7 @@ use SmileIdentity\Consent;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\UserDetails;
+use SmileIdentity\Helpers\Validation;
 
 /** enhanced_kyc.verify → POST /v3/enhanced_kyc. */
 final class EnhancedKycResource
@@ -39,6 +40,8 @@ final class EnhancedKycResource
         ?string $userId = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        $resolvedCallbackUrl = $callbackUrl ?? $this->config->defaultCallbackUrl;
+        Validation::callbackUrl($resolvedCallbackUrl);
 
         $data = Operations::enhancedKyc($this->transport, [
             'country' => $country,
@@ -46,7 +49,7 @@ final class EnhancedKycResource
             'id_number' => $idNumber,
             'bank_code' => $bankCode,
             'operator' => $operator,
-            'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
+            'callback_url' => $resolvedCallbackUrl,
             'user_details' => $userDetails,
             'consent' => $consent,
             'partner_params' => $partnerParams,

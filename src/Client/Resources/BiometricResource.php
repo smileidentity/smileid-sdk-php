@@ -12,6 +12,7 @@ use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\BinaryInput;
 use SmileIdentity\Helpers\UserDetails;
+use SmileIdentity\Helpers\Validation;
 
 /**
  * biometric.enroll → POST /v3/registration
@@ -48,11 +49,14 @@ final class BiometricResource
         ?string $userId = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Validation::livenessImages($livenessImages);
+        $resolvedCallbackUrl = $callbackUrl ?? $this->config->defaultCallbackUrl;
+        Validation::callbackUrl($resolvedCallbackUrl);
 
         $data = Operations::registration($this->transport, [
             'allow_new_enroll' => $allowNewEnroll,
             'sandbox_result' => $sandboxResult,
-            'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
+            'callback_url' => $resolvedCallbackUrl,
             'selfie_image' => $selfieImage,
             'liveness_images' => $livenessImages,
             'user_details' => $userDetails,
@@ -84,18 +88,21 @@ final class BiometricResource
         ?array $metadata = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        $resolvedCallbackUrl = $callbackUrl ?? $this->config->defaultCallbackUrl;
+        Validation::callbackUrl($resolvedCallbackUrl);
 
         if ($useEnrolledImage !== true) {
             if ($selfieImage === null || $livenessImages === null || $livenessImages === []) {
                 throw new ValidationError('selfie_image and liveness_images are required unless use_enrolled_image is true.');
             }
+            Validation::livenessImages($livenessImages);
         }
 
         $data = Operations::authentication($this->transport, [
             'user_id_body' => $userId,
             'use_enrolled_image' => $useEnrolledImage,
             'sandbox_result' => $sandboxResult,
-            'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
+            'callback_url' => $resolvedCallbackUrl,
             'selfie_image' => $selfieImage,
             'liveness_images' => $livenessImages,
             'user_details' => $userDetails,
@@ -130,6 +137,9 @@ final class BiometricResource
         ?array $metadata = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Validation::optionalLivenessImages($livenessImages);
+        $resolvedCallbackUrl = $callbackUrl ?? $this->config->defaultCallbackUrl;
+        Validation::callbackUrl($resolvedCallbackUrl);
 
         if (!in_array($comparisonImageType, self::COMPARISON_IMAGE_TYPES, true)) {
             throw new ValidationError("comparison_image_type must be either DOCUMENT, ID_PHOTO, or PORTRAIT.");
@@ -140,7 +150,7 @@ final class BiometricResource
             'allow_new_enroll' => $allowNewEnroll,
             'user_id_body' => $userId,
             'sandbox_result' => $sandboxResult,
-            'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
+            'callback_url' => $resolvedCallbackUrl,
             'selfie_image' => $selfieImage,
             'comparison_image' => $comparisonImage,
             'liveness_images' => $livenessImages,

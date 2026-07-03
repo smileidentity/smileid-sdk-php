@@ -46,6 +46,7 @@ final class Client
         ?string $partnerSecret = null,
         ?string $defaultCallbackUrl = null,
         ?string $baseUrl = null,
+        bool $allowInsecureBaseUrl = false,
         float $timeout = 30.0,
         int $maxRetries = 2,
         ?ClientInterface $httpClient = null,
@@ -58,6 +59,7 @@ final class Client
             partnerSecret: $partnerSecret,
             defaultCallbackUrl: $defaultCallbackUrl,
             baseUrl: $baseUrl,
+            allowInsecureBaseUrl: $allowInsecureBaseUrl,
             timeout: $timeout,
             maxRetries: $maxRetries,
         );
