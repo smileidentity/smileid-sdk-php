@@ -41,7 +41,6 @@ Constructor options:
 | `partnerId` | yes | — | numeric string, no leading zeros |
 | `apiKey` | yes | — | your partner API key |
 | `environment` | no | `sandbox` | `sandbox` or `production` |
-| `partnerSecret` | no | unset | enables HMAC request signing when set |
 | `defaultCallbackUrl` | no | unset | used when a call omits `callbackUrl`; must be https |
 | `baseUrl` | no | derived | explicit override; wins over `environment`; must be an absolute https URL with no query or fragment |
 | `timeout` | no | `30.0` | per-request total timeout in seconds |
@@ -325,10 +324,6 @@ The SDK retries idempotent operations only: status and services reads, and its i
 ## Telemetry
 
 Every request carries three headers identifying the SDK: `SmileID-Source-SDK: php`, `SmileID-Source-SDK-Version`, and a `User-Agent` of the form `smileid-sdk-php/<version> (php/<php-version>)`. They are observability metadata, never authentication, and carry no personal data.
-
-## HMAC request signing
-
-Request signing is off by default. Setting `partnerSecret` turns it on: each request then carries a `SmileID-Timestamp` header and a `SmileID-Request-Signature` header computed over the timestamp and the raw request body. The exact signature construction is provisional and must be confirmed with Smile ID before you rely on it in production.
 
 ## Security
 

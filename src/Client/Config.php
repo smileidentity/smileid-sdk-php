@@ -22,7 +22,6 @@ final class Config
         public readonly string $partnerId,
         public readonly string $apiKey,
         public readonly string $environment = 'sandbox',
-        public readonly ?string $partnerSecret = null,
         public readonly ?string $defaultCallbackUrl = null,
         ?string $baseUrl = null,
         public readonly float $timeout = 30.0,
@@ -46,10 +45,5 @@ final class Config
     private static function defaultBaseUrl(string $environment): string
     {
         return $environment === 'production' ? self::PRODUCTION_BASE_URL : self::SANDBOX_BASE_URL;
-    }
-
-    public function hmacEnabled(): bool
-    {
-        return $this->partnerSecret !== null && $this->partnerSecret !== '';
     }
 }
