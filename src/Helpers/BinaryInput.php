@@ -94,9 +94,15 @@ final class BinaryInput
      */
     public function toMultipartPart(string $name, string $defaultFilename, string $contentType, bool $allowPng = false): array
     {
-        if ($allowPng && $this->looksLikePng()) {
+        // Sanitize against multipart header injection before anything reads
+        // the filename or content type (fleet standard): strip CR, LF, double
+        // quotes and other control characters.
+        $filename = $this->filename !== null ? self::sanitizeHeaderValue($this->filename) : null;
+        $contentType = self::sanitizeHeaderValue($contentType);
+
+        if ($allowPng && $this->looksLikePng($filename)) {
             $contentType = 'image/png';
-            if ($this->filename === null && str_ends_with($defaultFilename, '.jpg')) {
+            if ($filename === null && str_ends_with($defaultFilename, '.jpg')) {
                 $defaultFilename = substr($defaultFilename, 0, -4) . '.png';
             }
         }
@@ -110,16 +116,26 @@ final class BinaryInput
         return [
             'name' => $name,
             'contents' => $contents,
-            'filename' => $this->filename ?? $defaultFilename,
+            'filename' => $filename ?? self::sanitizeHeaderValue($defaultFilename),
             'headers' => ['Content-Type' => $contentType],
         ];
     }
 
     private const PNG_SIGNATURE = "\x89PNG\r\n\x1a\n";
 
-    private function looksLikePng(): bool
+    /**
+     * Remove characters that could break out of a multipart part header:
+     * CR/LF (header injection), double quotes (parameter escape), and all
+     * other C0 control characters.
+     */
+    private static function sanitizeHeaderValue(string $value): string
     {
-        if ($this->filename !== null && str_ends_with(strtolower($this->filename), '.png')) {
+        return (string) preg_replace('/[\x00-\x1F\x7F"]/', '', $value);
+    }
+
+    private function looksLikePng(?string $filename): bool
+    {
+        if ($filename !== null && str_ends_with(strtolower($filename), '.png')) {
             return true;
         }
 

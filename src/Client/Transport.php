@@ -14,6 +14,7 @@ use SmileIdentity\Client\Auth\TokenManager;
 use SmileIdentity\Errors\AuthenticationError;
 use SmileIdentity\Errors\ConnectionError;
 use SmileIdentity\Errors\ErrorFactory;
+use SmileIdentity\Errors\UnexpectedResponseError;
 use SmileIdentity\Version;
 
 /**
@@ -84,7 +85,7 @@ final class Transport
             $raw = (string) $response->getBody();
 
             if (($status >= 200 && $status < 300) || in_array($status, $nonErrorStatuses, true)) {
-                return self::decode($raw);
+                return self::decodeSuccess($status, $raw, $response);
             }
 
             if ($status === 401 && $request->authenticated && !$refreshedOn401) {
@@ -202,7 +203,7 @@ final class Transport
             $raw = (string) $response->getBody();
 
             if ($status >= 200 && $status < 300) {
-                $data = self::decode($raw);
+                $data = self::decodeSuccess($status, $raw, $response);
                 $token = $data['token'] ?? null;
                 if (!is_string($token) || $token === '') {
                     throw new AuthenticationError('Token endpoint returned no token.', statusCode: $status, rawBody: $raw);
@@ -294,16 +295,26 @@ final class Transport
     }
 
     /**
+     * Decode a success-path body, raising UnexpectedResponseError when it is
+     * not a JSON object (fleet standard; e.g. an HTML gateway page).
+     *
      * @return array<string, mixed>
      */
-    private static function decode(string $raw): array
+    private static function decodeSuccess(int $status, string $raw, ResponseInterface $response): array
     {
-        if ($raw === '') {
-            return [];
-        }
-        $decoded = json_decode($raw, true);
+        $decoded = $raw === '' ? null : json_decode($raw, true);
+        if (!is_array($decoded)) {
+            $headers = self::lowercaseHeaders($response);
 
-        return is_array($decoded) ? $decoded : [];
+            throw new UnexpectedResponseError(
+                'Expected a JSON object response body.',
+                statusCode: $status,
+                requestId: $headers['x-request-id'] ?? $headers['request-id'] ?? null,
+                rawBody: $raw,
+            );
+        }
+
+        return $decoded;
     }
 
     /**

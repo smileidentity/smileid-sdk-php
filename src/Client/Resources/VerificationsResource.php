@@ -9,6 +9,7 @@ use SmileIdentity\Errors\TimeoutError;
 use SmileIdentity\Generated\Models\JobStatus;
 use SmileIdentity\Generated\Models\ReplayCallbackResponse;
 use SmileIdentity\Generated\Operations\Operations;
+use SmileIdentity\Helpers\Url;
 
 /**
  * verifications.retrieve → GET /v3/status/{jobId}
@@ -75,6 +76,8 @@ final class VerificationsResource
 
     public function replay(string $jobId, ?string $callbackUrl = null): ReplayCallbackResponse
     {
+        Url::requireHttpsCallback($callbackUrl);
+
         return ReplayCallbackResponse::fromArray(Operations::replay($this->transport, $jobId, $callbackUrl));
     }
 }

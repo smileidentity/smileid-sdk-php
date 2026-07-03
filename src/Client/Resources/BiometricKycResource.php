@@ -10,6 +10,7 @@ use SmileIdentity\Consent;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\BinaryInput;
+use SmileIdentity\Helpers\Url;
 use SmileIdentity\Helpers\UserDetails;
 
 /** biometric_kyc.verify → POST /v3/biometric_kyc (requires SmileID-Partner-ID header). */
@@ -43,6 +44,7 @@ final class BiometricKycResource
         ?string $userId = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Url::requireHttpsCallback($callbackUrl);
 
         $data = Operations::biometricKyc($this->transport, [
             'country' => $country,
