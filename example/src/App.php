@@ -35,7 +35,6 @@ final class App
             $client = new Client(
                 partnerId: $config['partnerId'],
                 apiKey: $config['apiKey'],
-                partnerSecret: $config['partnerSecret'],
                 defaultCallbackUrl: $config['callbackUrl'],
                 baseUrl: $config['baseUrl'],
                 timeout: (float) $config['timeout'],
@@ -66,7 +65,6 @@ final class App
         $config = [
             'partnerId' => $env['SMILE_PARTNER_ID'] ?? '',
             'apiKey' => $env['SMILE_API_KEY'] ?? '',
-            'partnerSecret' => $this->blankToNull($env['SMILE_PARTNER_SECRET'] ?? null),
             'baseUrl' => $this->blankToNull($env['SMILE_BASE_URL'] ?? null),
             'callbackUrl' => $this->blankToNull($env['SMILE_CALLBACK_URL'] ?? null),
             'timeout' => $env['SMILE_TIMEOUT'] ?? '30',
@@ -85,7 +83,6 @@ final class App
             match ($arg) {
                 '--partner-id' => $config['partnerId'] = $value,
                 '--api-key' => $config['apiKey'] = $value,
-                '--partner-secret' => $config['partnerSecret'] = $value,
                 '--base-url' => $config['baseUrl'] = $value,
                 '--callback-url' => $config['callbackUrl'] = $value,
                 '--timeout' => $config['timeout'] = $value,
@@ -247,7 +244,7 @@ Usage:
   smileid-example-php [global flags] status --job-id job_...
   smileid-example-php [global flags] replay --job-id job_... --callback-url https://example.com/webhook
 
-Global flags can also be set with SMILE_PARTNER_ID, SMILE_API_KEY, SMILE_PARTNER_SECRET, SMILE_BASE_URL, SMILE_CALLBACK_URL and SMILE_TIMEOUT.
+Global flags can also be set with SMILE_PARTNER_ID, SMILE_API_KEY, SMILE_BASE_URL, SMILE_CALLBACK_URL and SMILE_TIMEOUT.
 USAGE;
     }
 }
