@@ -72,13 +72,16 @@ final class App
             'timeout' => $env['SMILE_TIMEOUT'] ?? '30',
         ];
         $rest = [];
-        for ($i = 0; $i < count($argv); $i++) {
+        $i = 0;
+        for (; $i < count($argv); $i++) {
             $arg = $argv[$i];
             if (!str_starts_with($arg, '--')) {
-                $rest = array_slice($argv, $i);
                 break;
             }
-            $value = $argv[++$i] ?? '';
+            if ($i + 1 >= count($argv)) {
+                throw new UsageError("{$arg} requires a value");
+            }
+            $value = $argv[++$i];
             match ($arg) {
                 '--partner-id' => $config['partnerId'] = $value,
                 '--api-key' => $config['apiKey'] = $value,
@@ -89,6 +92,7 @@ final class App
                 default => throw new UsageError("unknown global flag {$arg}"),
             };
         }
+        $rest = array_slice($argv, $i);
         $command = array_shift($rest);
         return [$config, $command, $rest];
     }
@@ -215,7 +219,13 @@ final class App
     private function flag(array $args, string $name): ?string
     {
         $index = array_search($name, $args, true);
-        return $index === false ? null : ($args[$index + 1] ?? null);
+        if ($index === false) {
+            return null;
+        }
+        if (!isset($args[$index + 1])) {
+            throw new UsageError("{$name} requires a value");
+        }
+        return $args[$index + 1];
     }
 
     private function writeJson(mixed $stdout, mixed $value): void
