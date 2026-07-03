@@ -1,0 +1,15 @@
+rules:
+  - id: php-hardcoded-smile-credentials
+    message: Do not hard-code Smile ID credentials; read them from environment variables or a secret manager.
+    severity: ERROR
+    languages:
+      - php
+    patterns:
+      - pattern-either:
+          - pattern: |
+              new Client(..., apiKey: "...", ...)
+          - pattern: |
+              new Client(..., partnerSecret: "...", ...)
+    metadata:
+      category: security
+      confidence: MEDIUM
