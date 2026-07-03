@@ -42,8 +42,8 @@ Constructor options:
 | `apiKey` | yes | — | your partner API key |
 | `environment` | no | `sandbox` | `sandbox` or `production` |
 | `partnerSecret` | no | unset | enables HMAC request signing when set |
-| `defaultCallbackUrl` | no | unset | used when a call omits `callbackUrl` |
-| `baseUrl` | no | derived | explicit override; wins over `environment` |
+| `defaultCallbackUrl` | no | unset | used when a call omits `callbackUrl`; must be https |
+| `baseUrl` | no | derived | explicit override; wins over `environment`; must be an absolute https URL with no query or fragment |
 | `timeout` | no | `30.0` | per-request total timeout in seconds |
 | `maxRetries` | no | `2` | retries for idempotent operations only |
 | `httpClient` | no | Guzzle | any `GuzzleHttp\ClientInterface`, injectable for testing |
@@ -54,6 +54,8 @@ Constructor options:
 - `production` → `https://api.smileidentity.com`
 
 Pass `baseUrl` to override either.
+
+All URLs you give the SDK must be https. The base URL must be absolute with no query or fragment, and callback URLs (`defaultCallbackUrl` and per-request `callbackUrl`) must be absolute https URLs. Anything else raises `ValidationError` before a request is made.
 
 ## Binary inputs
 
@@ -187,7 +189,7 @@ Compare a selfie with another image: a document photo, an ID photo, or a portrai
 $accepted = $smile->biometric->compare(
     selfieImage: '/tmp/selfie.jpg',
     comparisonImage: '/tmp/id_photo.jpg',
-    comparisonImageType: 'ID_PHOTO',    // DOCUMENT | ID_PHOTO | PORTRAIT
+    comparisonImageType: 'ID_PHOTO',    // DOCUMENT | ID_PHOTO | PORTRAIT (validated by the server)
     consent: $consent,
     userDetails: $userDetails,
 );
@@ -311,6 +313,7 @@ try {
 | `ConflictError` | HTTP 409, replay of a job still processing |
 | `PayloadTooLargeError` | HTTP 413 |
 | `RateLimitError` | HTTP 429 |
+| `UnexpectedResponseError` | a 2xx response whose body is not a JSON object |
 | `APIError` | HTTP 5xx |
 | `ConnectionError` | network failure, no HTTP response |
 | `TimeoutError` | `waitUntilComplete` deadline passed |

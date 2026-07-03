@@ -9,6 +9,7 @@ use SmileIdentity\Client\Transport;
 use SmileIdentity\Consent;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
+use SmileIdentity\Helpers\Url;
 use SmileIdentity\Helpers\UserDetails;
 
 /** enhanced_kyc.verify → POST /v3/enhanced_kyc. */
@@ -39,6 +40,7 @@ final class EnhancedKycResource
         ?string $userId = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Url::requireHttpsCallback($callbackUrl);
 
         $data = Operations::enhancedKyc($this->transport, [
             'country' => $country,

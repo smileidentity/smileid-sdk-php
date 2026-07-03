@@ -21,7 +21,7 @@ use SmileIdentity\Tests\Support\MultipartParser;
  */
 final class FleetHardeningTest extends TestCase
 {
-    /** @return array<string, mixed> */
+    /** @return array{country: string, idType: string, idNumber: string, userDetails: array<string, mixed>, consent: Consent} */
     private function entryArgs(): array
     {
         return [
@@ -71,8 +71,10 @@ final class FleetHardeningTest extends TestCase
     {
         $mock = new MockClient([]);
 
+        $args = $this->entryArgs() + ['callbackUrl' => 'http://app.example.com/cb'];
+
         try {
-            $mock->client->enhancedKyc->verify(...$this->entryArgs(), callbackUrl: 'http://app.example.com/cb');
+            $mock->client->enhancedKyc->verify(...$args);
             self::fail('Expected ValidationError');
         } catch (ValidationError $e) {
             self::assertStringContainsString('https', $e->getMessage());

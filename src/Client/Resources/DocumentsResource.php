@@ -10,6 +10,7 @@ use SmileIdentity\Consent;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\BinaryInput;
+use SmileIdentity\Helpers\Url;
 use SmileIdentity\Helpers\UserDetails;
 
 /**
@@ -131,6 +132,7 @@ final class DocumentsResource
         ?string $userId,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Url::requireHttpsCallback($callbackUrl);
 
         $data = Operations::documentVerification($this->transport, [
             'country' => $country,

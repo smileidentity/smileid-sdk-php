@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SmileIdentity\Client;
 
 use SmileIdentity\Errors\ValidationError;
+use SmileIdentity\Helpers\Url;
 
 /**
  * Immutable client configuration (§2.1). Constructed once and shared with the
@@ -37,7 +38,9 @@ final class Config
             throw new ValidationError("environment must be 'sandbox' or 'production'.");
         }
 
-        $this->baseUrl = rtrim($baseUrl ?? self::defaultBaseUrl($environment), '/');
+        Url::requireHttpsCallback($defaultCallbackUrl, 'default_callback_url');
+
+        $this->baseUrl = rtrim(Url::requireHttpsBase($baseUrl ?? self::defaultBaseUrl($environment)), '/');
     }
 
     private static function defaultBaseUrl(string $environment): string

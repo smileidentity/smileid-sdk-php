@@ -11,6 +11,7 @@ use SmileIdentity\Errors\ValidationError;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\BinaryInput;
+use SmileIdentity\Helpers\Url;
 use SmileIdentity\Helpers\UserDetails;
 
 /**
@@ -20,8 +21,6 @@ use SmileIdentity\Helpers\UserDetails;
  */
 final class BiometricResource
 {
-    private const COMPARISON_IMAGE_TYPES = ['DOCUMENT', 'ID_PHOTO', 'PORTRAIT'];
-
     public function __construct(
         private readonly Transport $transport,
         private readonly Config $config,
@@ -48,6 +47,7 @@ final class BiometricResource
         ?string $userId = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Url::requireHttpsCallback($callbackUrl);
 
         $data = Operations::registration($this->transport, [
             'allow_new_enroll' => $allowNewEnroll,
@@ -84,6 +84,7 @@ final class BiometricResource
         ?array $metadata = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Url::requireHttpsCallback($callbackUrl);
 
         if ($useEnrolledImage !== true) {
             if ($selfieImage === null || $livenessImages === null || $livenessImages === []) {
@@ -130,11 +131,10 @@ final class BiometricResource
         ?array $metadata = null,
     ): AcceptedResponse {
         UserDetails::validate($userDetails);
+        Url::requireHttpsCallback($callbackUrl);
 
-        if (!in_array($comparisonImageType, self::COMPARISON_IMAGE_TYPES, true)) {
-            throw new ValidationError("comparison_image_type must be either DOCUMENT, ID_PHOTO, or PORTRAIT.");
-        }
-
+        // comparison_image_type is passed through verbatim: the server owns
+        // that 400 (fleet decision).
         $data = Operations::compare($this->transport, [
             'comparison_image_type' => $comparisonImageType,
             'allow_new_enroll' => $allowNewEnroll,

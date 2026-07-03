@@ -155,20 +155,6 @@ final class ValidationTest extends TestCase
         self::assertCount(0, $mock->history);
     }
 
-    public function testCompareRejectsInvalidComparisonImageType(): void
-    {
-        $mock = new MockClient([]);
-
-        $this->expectException(ValidationError::class);
-        $mock->client->biometric->compare(
-            selfieImage: 'bytes',
-            comparisonImage: 'bytes',
-            comparisonImageType: 'SELFIE',
-            consent: $this->consent(),
-            userDetails: ['given_names' => 'John', 'last_name' => 'Doe', 'email' => 'john@example.com'],
-        );
-    }
-
     public function testConfigRejectsBadPartnerId(): void
     {
         $this->expectException(ValidationError::class);
