@@ -1,6 +1,6 @@
 # Smile ID PHP SDK Example
 
-This repository is a small CLI application that demonstrates the public `smileid/smileid` PHP SDK.
+This repository is a small CLI application that demonstrates the public `smileid/usesmileid` PHP SDK.
 
 It also acts as a testbench: PHPUnit runs the same CLI code against Guzzle `MockHandler` responses and verifies the SDK sends the expected requests.
 
