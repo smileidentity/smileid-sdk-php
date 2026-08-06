@@ -131,10 +131,6 @@ final class Transport
             $stream = new MultipartStream(self::rewindResources($request->multipart));
             $headers['Content-Type'] = 'multipart/form-data; boundary=' . $stream->getBoundary();
             $body = (string) $stream;
-        } elseif ($request->bodyKind === ApiRequest::BODY_JSON) {
-            $encoded = json_encode($request->jsonBody ?? [], JSON_UNESCAPED_SLASHES);
-            $body = $encoded === false ? '{}' : $encoded;
-            $headers['Content-Type'] = 'application/json';
         }
 
         return [$headers, $body];
