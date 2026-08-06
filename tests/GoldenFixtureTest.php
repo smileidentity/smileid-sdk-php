@@ -15,7 +15,8 @@ use SmileIdentity\Version;
 /**
  * Golden-fixture serialization per spec §6: exact multipart wire shape, header
  * routing per operation, JSON parts with application/json, repeated
- * liveness_images parts, and replay as JSON (not multipart).
+ * liveness_images parts, and replay's optional callback_url override as a
+ * single multipart part (no body at all without an override).
  */
 final class GoldenFixtureTest extends TestCase
 {
