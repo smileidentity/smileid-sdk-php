@@ -191,18 +191,17 @@ final class Operations
      */
     public static function replay(Transport $transport, string $jobId, ?string $callbackUrl): array
     {
-        $jsonBody = [];
-        if ($callbackUrl !== null && $callbackUrl !== '') {
-            $jsonBody['callback_url'] = $callbackUrl;
-        }
+        // Multipart with one callback_url part when overriding; otherwise no
+        // body at all (any content type other than multipart gets a 415).
+        $hasOverride = $callbackUrl !== null && $callbackUrl !== '';
 
         return $transport->send(new ApiRequest(
             method: 'POST',
             path: '/v3/replay/' . rawurlencode($jobId),
             authenticated: true,
             idempotent: false,
-            jsonBody: $jsonBody,
-            bodyKind: ApiRequest::BODY_JSON,
+            multipart: $hasOverride ? [Multipart::scalar('callback_url', $callbackUrl)] : [],
+            bodyKind: $hasOverride ? ApiRequest::BODY_MULTIPART : ApiRequest::BODY_NONE,
         ));
     }
 

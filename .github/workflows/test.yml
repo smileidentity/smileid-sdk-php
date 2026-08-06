@@ -24,6 +24,12 @@ jobs:
         run: composer install --prefer-dist --no-progress
       - name: Run tests
         run: vendor/bin/phpunit
+      - name: Install example dependencies
+        run: composer install --prefer-dist --no-progress
+        working-directory: example
+      - name: Run example tests
+        run: vendor/bin/phpunit
+        working-directory: example
   lint:
     runs-on: ubuntu-latest
     steps:

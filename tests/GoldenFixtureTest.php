@@ -15,7 +15,8 @@ use SmileIdentity\Version;
 /**
  * Golden-fixture serialization per spec §6: exact multipart wire shape, header
  * routing per operation, JSON parts with application/json, repeated
- * liveness_images parts, and replay as JSON (not multipart).
+ * liveness_images parts, and replay's optional callback_url override as a
+ * single multipart part (no body at all without an override).
  */
 final class GoldenFixtureTest extends TestCase
 {
@@ -310,7 +311,7 @@ final class GoldenFixtureTest extends TestCase
         self::assertSame('Verification completed with state: clear', $status->message);
     }
 
-    public function testReplayIsJsonNotMultipart(): void
+    public function testReplayWithOverrideSendsOneMultipartCallbackUrlPart(): void
     {
         $mock = new MockClient([
             MockClient::tokenResponse(),
@@ -333,11 +334,35 @@ final class GoldenFixtureTest extends TestCase
             'https://testapi.smileidentity.com/v3/replay/job_01h8x9y2z3a4b5c6d7e8f9g0h1',
             (string) $request->getUri(),
         );
-        self::assertSame('application/json', $request->getHeaderLine('Content-Type'));
-        self::assertSame('{"callback_url":"https://app.example.com/cb"}', (string) $request->getBody());
+        self::assertStringStartsWith('multipart/form-data; boundary=', $request->getHeaderLine('Content-Type'));
+
+        $parts = MultipartParser::parse($request);
+        self::assertCount(1, $parts);
+        self::assertSame('callback_url', $parts[0]['name']);
+        self::assertSame('https://app.example.com/cb', $parts[0]['body']);
+        self::assertNull($parts[0]['contentType']);
 
         self::assertTrue($response->isAccepted);
         self::assertSame('job_01h8x9y2z3a4b5c6d7e8f9g0h1', $response->jobId);
+    }
+
+    public function testReplayWithoutOverrideSendsNoBody(): void
+    {
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new Response(202, [], (string) json_encode([
+                'status' => 'accepted',
+                'job_id' => 'job_01h8x9y2z3a4b5c6d7e8f9g0h1',
+                'user_id' => 'test-user',
+                'message' => 'Callback replay queued successfully.',
+            ])),
+        ]);
+
+        $mock->client->verifications->replay('job_01h8x9y2z3a4b5c6d7e8f9g0h1');
+
+        $request = $mock->request(1);
+        self::assertFalse($request->hasHeader('Content-Type'));
+        self::assertSame('', (string) $request->getBody());
     }
 
     public function testReportFraudGoldenRequest(): void

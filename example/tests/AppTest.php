@@ -95,7 +95,11 @@ final class AppTest extends TestCase
 
         $result = $this->readJson($out);
         self::assertSame('success', $result['status']);
-        self::assertSame(['callback_url' => 'https://example.com/replay-callback'], json_decode((string) $fake->history[1]['request']->getBody(), true, flags: JSON_THROW_ON_ERROR));
+        $request = $fake->history[1]['request'];
+        self::assertStringStartsWith('multipart/form-data; boundary=', $request->getHeaderLine('Content-Type'));
+        $body = (string) $request->getBody();
+        self::assertStringContainsString('name="callback_url"', $body);
+        self::assertStringContainsString('https://example.com/replay-callback', $body);
     }
 
     public function testHelpDoesNotRequireCredentials(): void

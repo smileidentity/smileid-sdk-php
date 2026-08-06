@@ -15,12 +15,10 @@ final class ApiRequest
 {
     public const BODY_NONE = 'none';
     public const BODY_MULTIPART = 'multipart';
-    public const BODY_JSON = 'json';
 
     /**
      * @param array<string, scalar> $query
      * @param list<array<string, mixed>> $multipart Guzzle-style multipart entries
-     * @param array<string, mixed>|null $jsonBody
      */
     public function __construct(
         public readonly string $method,
@@ -31,7 +29,6 @@ final class ApiRequest
         public readonly ?string $userIdHeader = null,
         public readonly array $query = [],
         public readonly array $multipart = [],
-        public readonly ?array $jsonBody = null,
         public readonly string $bodyKind = self::BODY_NONE,
     ) {
     }
