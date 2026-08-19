@@ -1,0 +1,65 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Verify tag matches SDK version
+    if: github.repository == 'smileidentity/smileid-sdk-php'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Compare tag to src/Version.php
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          SRC_VERSION=$(grep -oP "VERSION = '\K[^']+" src/Version.php)
+          if [ -z "$SRC_VERSION" ]; then
+            echo "::error::Could not read SmileIdentity\\Version::VERSION from src/Version.php"
+            exit 1
+          fi
+          if [ "$TAG_VERSION" != "$SRC_VERSION" ]; then
+            echo "::error::Tag is v$TAG_VERSION but src/Version.php declares $SRC_VERSION. Update the VERSION constant before tagging."
+            exit 1
+          fi
+          echo "Tag v$TAG_VERSION matches src/Version.php"
+
+  # composer.json has no "version" field (Packagist infers it from the git
+  # tag) so there is nothing to guard there. src/Version.php is the actual
+  # source of truth: its VERSION const is sent as the SmileID-Source-SDK-Version
+  # header on every request, so it is the value that matters to consumers.
+
+  test:
+    name: Full test suite
+    needs: guard
+    uses: ./.github/workflows/test.yml
+
+  release:
+    name: Create GitHub release
+    needs: [guard, test]
+    if: github.repository == 'smileidentity/smileid-sdk-php'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Create release if it does not exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists, skipping."
+            exit 0
+          fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes
+
+  # No publish step: Packagist tracks smileid/usesmileid via a GitHub webhook
+  # and picks up new versions from pushed tags automatically. There is no
+  # registry credential for this SDK, so there is no secret to guard here.
