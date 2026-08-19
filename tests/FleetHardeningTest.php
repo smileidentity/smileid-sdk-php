@@ -150,7 +150,7 @@ final class FleetHardeningTest extends TestCase
     {
         $mock = new MockClient([
             MockClient::tokenResponse(),
-            new Response(200, [], '{"status":"complete","job_id":"j","user_id":"u","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"j","user_id":"u","message":"Job completed"}'),
         ]);
 
         $mock->client->verifications->retrieve('job/../0 ?x');

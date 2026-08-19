@@ -7,6 +7,7 @@ namespace SmileIdentity\Example;
 use GuzzleHttp\ClientInterface;
 use SmileIdentity\Client;
 use SmileIdentity\Consent;
+use SmileIdentity\Errors\SmileIDError;
 
 final class UsageError extends \RuntimeException
 {
@@ -52,6 +53,10 @@ final class App
         } catch (UsageError $e) {
             fwrite($stderr, $e->getMessage() . PHP_EOL);
             return 2;
+        } catch (SmileIDError $e) {
+            $suffix = $e->statusCode === null ? '' : " (HTTP {$e->statusCode})";
+            fwrite($stderr, get_class($e) . ': ' . $e->getMessage() . $suffix . PHP_EOL);
+            return 1;
         }
     }
 
@@ -91,6 +96,16 @@ final class App
         }
         $rest = array_slice($argv, $i);
         $command = array_shift($rest);
+        // Global flags only bind before the command. Anything global that turns
+        // up after it used to be dropped without a word, so `status --job-id X
+        // --base-url https://devapi...` quietly talked to the default host.
+        // ponytail: --callback-url is left out on purpose — it is also a
+        // per-command flag on enhanced-kyc and replay.
+        foreach ($rest as $arg) {
+            if (in_array($arg, ['--partner-id', '--api-key', '--base-url', '--timeout'], true)) {
+                throw new UsageError("{$arg} is a global flag and must come before the command");
+            }
+        }
         return [$config, $command, $rest];
     }
 
@@ -240,11 +255,18 @@ final class App
         return <<<'USAGE'
 Usage:
   smileid-example-php [global flags] services --country NG
-  smileid-example-php [global flags] enhanced-kyc --country NG --id-type NIN --id-number 12345678901 --given-names Amina --last-name Okafor --email amina@example.com --privacy-url https://example.com/privacy
+  smileid-example-php [global flags] enhanced-kyc --country NG --id-type NIN --id-number 12345678901 --given-names "Amina Fatou" --last-name Clearwater --email amina.clearwater@example.com --privacy-url https://example.com/privacy
   smileid-example-php [global flags] status --job-id job_...
   smileid-example-php [global flags] replay --job-id job_... --callback-url https://example.com/webhook
 
-Global flags can also be set with SMILE_PARTNER_ID, SMILE_API_KEY, SMILE_BASE_URL, SMILE_CALLBACK_URL and SMILE_TIMEOUT.
+Global flags are --partner-id, --api-key, --base-url, --callback-url and --timeout. They go before the
+command, and can also be set with SMILE_PARTNER_ID, SMILE_API_KEY, SMILE_BASE_URL, SMILE_CALLBACK_URL
+and SMILE_TIMEOUT.
+
+Partner ids are displayed zero-padded (for example 002) but must be passed without leading zeros (2).
+
+Non-production environments match test identities on given names + last name + email. An unrecognised
+identity resolves to block.
 USAGE;
     }
 }

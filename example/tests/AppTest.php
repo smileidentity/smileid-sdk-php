@@ -48,9 +48,9 @@ final class AppTest extends TestCase
             '--country', 'NG',
             '--id-type', 'NIN',
             '--id-number', '12345678901',
-            '--given-names', 'Amina',
-            '--last-name', 'Okafor',
-            '--email', 'amina@example.com',
+            '--given-names', 'Amina Fatou',
+            '--last-name', 'Clearwater',
+            '--email', 'amina.clearwater@example.com',
         ], $this->env(), $out, httpClient: $fake->client);
 
         self::assertSame(0, $code);
@@ -66,21 +66,21 @@ final class AppTest extends TestCase
         self::assertStringContainsString('name="id_type"', $body);
         self::assertStringContainsString('NIN', $body);
         self::assertStringContainsString('https://example.com/smile-callback', $body);
-        self::assertStringContainsString('"given_names":"Amina"', $body);
+        self::assertStringContainsString('"given_names":"Amina Fatou"', $body);
     }
 
     public function testStatusRetrievesVerification(): void
     {
         $fake = new FakeSmileApi([
             FakeSmileApi::tokenResponse(),
-            new Response(200, [], json_encode(['status' => 'complete', 'message' => 'clear', 'job_id' => 'job_enhanced_123', 'user_id' => 'user_123'], JSON_THROW_ON_ERROR)),
+            new Response(200, [], json_encode(['status' => 'clear', 'message' => 'Job completed', 'job_id' => 'job_enhanced_123', 'user_id' => 'user_123'], JSON_THROW_ON_ERROR)),
         ]);
         $out = fopen('php://memory', 'w+');
         (new App())->run(['--base-url', 'https://api.test', 'status', '--job-id', 'job_enhanced_123'], $this->env(), $out, httpClient: $fake->client);
 
         $result = $this->readJson($out);
-        self::assertSame('complete', $result['status']);
-        self::assertSame('clear', $result['message']);
+        self::assertSame('clear', $result['status']);
+        self::assertSame('Job completed', $result['message']);
         self::assertSame('/v3/status/job_enhanced_123', $fake->history[1]['request']->getUri()->getPath());
     }
 
@@ -118,6 +118,20 @@ final class AppTest extends TestCase
         self::assertSame(2, $code);
         rewind($err);
         self::assertStringContainsString('SMILE_PARTNER_ID', stream_get_contents($err));
+    }
+
+    public function testGlobalFlagAfterCommandIsRejected(): void
+    {
+        $err = fopen('php://memory', 'w+');
+        $code = (new App())->run(
+            ['status', '--job-id', 'job_enhanced_123', '--base-url', 'https://api.test'],
+            $this->env(),
+            stderr: $err,
+        );
+
+        self::assertSame(2, $code);
+        rewind($err);
+        self::assertStringContainsString('--base-url is a global flag', (string) stream_get_contents($err));
     }
 
     /** @return array<string, string> */

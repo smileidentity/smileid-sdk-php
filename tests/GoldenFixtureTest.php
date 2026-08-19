@@ -290,10 +290,10 @@ final class GoldenFixtureTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             new Response(200, [], (string) json_encode([
-                'status' => 'complete',
+                'status' => 'clear',
                 'job_id' => 'job_01h8x9y2z3a4b5c6d7e8f9g0h1',
                 'user_id' => 'user_01h8x9y2z3a4b5c6d7e8f9g0h1',
-                'message' => 'Verification completed with state: clear',
+                'message' => 'Job completed',
             ])),
         ]);
 
@@ -308,7 +308,8 @@ final class GoldenFixtureTest extends TestCase
         self::assertNotSame('', $request->getHeaderLine('SmileID-Token'));
 
         self::assertTrue($status->isComplete);
-        self::assertSame('Verification completed with state: clear', $status->message);
+        self::assertSame('clear', $status->status);
+        self::assertSame('Job completed', $status->message);
     }
 
     public function testReplayWithOverrideSendsOneMultipartCallbackUrlPart(): void

@@ -20,7 +20,7 @@ final class TokenLifecycleTest extends TestCase
     {
         $mock = new MockClient([
             MockClient::tokenResponse(),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $mock->client->verifications->retrieve('job_01h8x9y2z3a4b5c6d7e8f9g0h1');
@@ -43,7 +43,7 @@ final class TokenLifecycleTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             new Response(200, [], '{"status":"processing","job_id":"job_1","user_id":"user_1","message":"..."}'),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $mock->client->verifications->retrieve('job_1');
@@ -65,9 +65,9 @@ final class TokenLifecycleTest extends TestCase
         // exp only 30s away: inside the 60s skew, so the cache treats it as expired.
         $mock = new MockClient([
             MockClient::tokenResponse(exp: time() + 30),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
             MockClient::tokenResponse(),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $mock->client->verifications->retrieve('job_1');
@@ -81,9 +81,9 @@ final class TokenLifecycleTest extends TestCase
     {
         $mock = new MockClient([
             new Response(200, [], '{"token":"not-a-jwt"}'),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
             new Response(200, [], '{"token":"still-not-a-jwt"}'),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $mock->client->verifications->retrieve('job_1');
@@ -101,7 +101,7 @@ final class TokenLifecycleTest extends TestCase
             MockClient::tokenResponse(),
             new Response(401, [], '{"status":"Unauthorized","message":"Token expired"}'),
             MockClient::tokenResponse(),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $status = $mock->client->verifications->retrieve('job_1');

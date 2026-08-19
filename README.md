@@ -38,7 +38,7 @@ Constructor options:
 
 | Option | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `partnerId` | yes | — | numeric string, no leading zeros |
+| `partnerId` | yes | — | numeric string; partner ids are displayed zero-padded (for example 002) but must be passed without leading zeros (2) |
 | `apiKey` | yes | — | your partner API key |
 | `environment` | no | `sandbox` | `sandbox` or `production` |
 | `defaultCallbackUrl` | no | unset | used when a call omits `callbackUrl`; must be https |
@@ -49,10 +49,22 @@ Constructor options:
 
 ## Environments
 
+`environment` names two hosts:
+
 - `sandbox` (default) → `https://testapi.smileidentity.com`
 - `production` → `https://api.smileidentity.com`
 
-Pass `baseUrl` to override either.
+Any other host needs `baseUrl`, which wins over `environment`:
+
+```php
+$smile = new Client(
+    partnerId: '2',
+    apiKey: getenv('SMILE_API_KEY'),
+    baseUrl: 'https://devapi.smileidentity.com',
+);
+```
+
+Outside production, Smile ID matches test identities on given names + last name + email. An identity it does not recognise resolves to `block`.
 
 All URLs you give the SDK must be https. The base URL must be absolute with no query or fragment, and callback URLs (`defaultCallbackUrl` and per-request `callbackUrl`) must be absolute https URLs. Anything else raises `ValidationError` before a request is made.
 
@@ -199,9 +211,9 @@ $accepted = $smile->biometric->compare(
 ```php
 $status = $smile->verifications->retrieve($accepted->jobId);
 
-$status->status;      // "complete", "processing" or "not_found"
-$status->isComplete;  // true when terminal
-$status->message;     // e.g. "Verification completed with state: clear"
+$status->status;      // "processing", "not_found", or the decision: "clear", "block", "attention", "error"
+$status->isComplete;  // true when terminal, i.e. neither processing nor not_found
+$status->message;     // e.g. "Job completed"
 ```
 
 A job that is not found returns a `JobStatus` with `status` of `not_found` rather than throwing, so you can poll a job that has not landed yet.
@@ -217,7 +229,7 @@ $status = $smile->verifications->waitUntilComplete(
 );
 ```
 
-Throws `SmileIdentity\Errors\TimeoutError` if the job does not complete in time.
+Polls while the status is `processing` (and, by default, while it is `not_found`), and returns as soon as the job reports a decision. Throws `SmileIdentity\Errors\TimeoutError` if the job does not complete in time.
 
 ### Replay a callback
 

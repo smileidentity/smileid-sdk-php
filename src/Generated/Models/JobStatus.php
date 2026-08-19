@@ -7,8 +7,10 @@ namespace SmileIdentity\Generated\Models;
 /**
  * GET /v3/status/{jobId} response.
  *
- * status is one of complete / processing / not_found. The terminal sub-state
- * (clear/block/attention/error) currently appears only in $message.
+ * status is `processing` while the job runs, `not_found` for an unknown job,
+ * and otherwise the terminal decision itself: clear / block / attention /
+ * error. $message is a human-readable note ("Job completed" on a finished
+ * job), not the decision.
  */
 final class JobStatus
 {
@@ -22,9 +24,11 @@ final class JobStatus
         public readonly ?string $userId,
         public readonly ?string $message,
     ) {
-        $this->isComplete = $status === 'complete';
         $this->isProcessing = $status === 'processing';
         $this->isNotFound = $status === 'not_found';
+        // Terminal means "any decision the API reports": anything that is not
+        // still running and not missing.
+        $this->isComplete = $status !== '' && !$this->isProcessing && !$this->isNotFound;
     }
 
     /**
