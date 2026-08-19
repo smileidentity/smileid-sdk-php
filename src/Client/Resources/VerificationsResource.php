@@ -45,7 +45,11 @@ final class VerificationsResource
     }
 
     /**
-     * Poll until the job is complete.
+     * Poll until the job reaches a terminal status.
+     *
+     * Keeps polling while the status is `processing` (and, by default, while
+     * it is `not_found`); returns on any other status, which is the job's
+     * decision: clear / block / attention / error.
      *
      * @throws TimeoutError when the deadline passes before completion
      */

@@ -38,7 +38,7 @@ final class RetryPolicyTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             new Response(503, [], '{"status":"Service Unavailable","message":"try later"}'),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $status = $mock->client->verifications->retrieve('job_1');
@@ -53,7 +53,7 @@ final class RetryPolicyTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             new Response(429, ['Retry-After' => '7'], '{"status":"Too Many Requests","message":"slow down"}'),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $mock->client->verifications->retrieve('job_1');
@@ -67,7 +67,7 @@ final class RetryPolicyTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             new Response(429, ['Retry-After' => $httpDate], '{"status":"Too Many Requests","message":"slow down"}'),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $mock->client->verifications->retrieve('job_1');
@@ -84,7 +84,7 @@ final class RetryPolicyTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             new Response(429, ['Retry-After' => $httpDate], '{"status":"Too Many Requests","message":"slow down"}'),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $mock->client->verifications->retrieve('job_1');
@@ -97,7 +97,7 @@ final class RetryPolicyTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             new Response(429, ['Retry-After' => '300'], '{"status":"Too Many Requests","message":"slow down"}'),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $mock->client->verifications->retrieve('job_1');
@@ -165,7 +165,7 @@ final class RetryPolicyTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             new ConnectException('Connection reset', new Request('GET', '/v3/status/job_1')),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $status = $mock->client->verifications->retrieve('job_1');
@@ -214,7 +214,7 @@ final class RetryPolicyTest extends TestCase
         $mock = new MockClient([
             new Response(500, [], '{"status":"Internal Server Error","message":"boom"}'),
             MockClient::tokenResponse(),
-            new Response(200, [], '{"status":"complete","job_id":"job_1","user_id":"user_1","message":"done"}'),
+            new Response(200, [], '{"status":"clear","job_id":"job_1","user_id":"user_1","message":"Job completed"}'),
         ]);
 
         $status = $mock->client->verifications->retrieve('job_1');

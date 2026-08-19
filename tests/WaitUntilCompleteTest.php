@@ -17,29 +17,51 @@ final class WaitUntilCompleteTest extends TestCase
 {
     private function jobStatusResponse(string $status): Response
     {
-        return new Response($status === 'complete' ? 200 : ($status === 'not_found' ? 404 : 202), [], (string) json_encode([
+        $code = match ($status) {
+            'not_found' => 404,
+            'processing' => 202,
+            default => 200,
+        };
+
+        return new Response($code, [], (string) json_encode([
             'status' => $status,
             'job_id' => 'job_1',
             'user_id' => 'user_1',
-            'message' => "Verification is {$status}",
+            'message' => $code === 200 ? 'Job completed' : "Verification is {$status}",
         ]));
     }
 
-    public function testPollsUntilComplete(): void
+    public function testPollsUntilClear(): void
     {
         $mock = new MockClient([
             MockClient::tokenResponse(),
             $this->jobStatusResponse('processing'),
             $this->jobStatusResponse('processing'),
-            $this->jobStatusResponse('complete'),
+            $this->jobStatusResponse('clear'),
         ]);
 
         $status = $mock->client->verifications->waitUntilComplete('job_1', interval: 2.0, timeout: 60.0);
 
         self::assertTrue($status->isComplete);
+        self::assertSame('clear', $status->status);
         // Two sleeps of the polling interval between the three polls.
         self::assertSame([2.0, 2.0], $mock->sleeps);
         self::assertCount(4, $mock->history);
+    }
+
+    public function testReturnsOnBlock(): void
+    {
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            $this->jobStatusResponse('processing'),
+            $this->jobStatusResponse('block'),
+        ]);
+
+        $status = $mock->client->verifications->waitUntilComplete('job_1', interval: 2.0, timeout: 60.0);
+
+        self::assertTrue($status->isComplete);
+        self::assertSame('block', $status->status);
+        self::assertCount(3, $mock->history);
     }
 
     public function testNotFoundIsPendingByDefault(): void
@@ -47,7 +69,7 @@ final class WaitUntilCompleteTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             $this->jobStatusResponse('not_found'),
-            $this->jobStatusResponse('complete'),
+            $this->jobStatusResponse('clear'),
         ]);
 
         $status = $mock->client->verifications->waitUntilComplete('job_1');
