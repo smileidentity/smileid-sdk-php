@@ -19,8 +19,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Compare tag to src/Version.php
         run: |
+          set -euo pipefail
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          SRC_VERSION=$(grep -oP "VERSION = '\K[^']+" src/Version.php)
+          SRC_VERSION=$(grep -oP "VERSION\s*=\s*'\K[^']+" src/Version.php | head -n1 || true)
           if [ -z "$SRC_VERSION" ]; then
             echo "::error::Could not read SmileIdentity\\Version::VERSION from src/Version.php"
             exit 1
@@ -54,11 +55,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $GITHUB_REF_NAME already exists, skipping."
             exit 0
           fi
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes
+          PRERELEASE=""
+          case "$GITHUB_REF_NAME" in
+            *-*) PRERELEASE="--prerelease" ;;
+          esac
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes --verify-tag $PRERELEASE
 
   # No publish step: Packagist tracks smileid/usesmileid via a GitHub webhook
   # and picks up new versions from pushed tags automatically. There is no
