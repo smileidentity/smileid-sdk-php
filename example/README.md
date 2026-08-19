@@ -24,12 +24,12 @@ The Composer configuration uses the sibling SDK checkout as a path repository.
 export SMILE_PARTNER_ID="12345"
 export SMILE_API_KEY="..."
 export SMILE_CALLBACK_URL="https://your-app.example.com/smile-callback"
-export SMILE_BASE_URL="https://devapi.smileidentity.com"
+export SMILE_BASE_URL="https://your-environment.example.com"
 ```
 
 Partner ids are displayed zero-padded (for example 002) but must be passed without leading zeros (2).
 
-`SMILE_BASE_URL` sets the API host. The SDK only names two environments, sandbox and production, so any other host — devapi, for example — has to come from this variable or the `--base-url` flag.
+`SMILE_BASE_URL` sets the API host. The SDK only names two environments, sandbox and production, so any other host has to come from this variable or the `--base-url` flag.
 
 Optional:
 
