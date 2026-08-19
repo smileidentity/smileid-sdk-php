@@ -60,7 +60,7 @@ Any other host needs `baseUrl`, which wins over `environment`:
 $smile = new Client(
     partnerId: '2',
     apiKey: getenv('SMILE_API_KEY'),
-    baseUrl: 'https://devapi.smileidentity.com',
+    baseUrl: 'https://your-environment.example.com',
 );
 ```
 

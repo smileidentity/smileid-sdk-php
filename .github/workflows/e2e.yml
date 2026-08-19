@@ -1,0 +1,42 @@
+name: e2e
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '35 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  # push and schedule both resolve to refs/heads/main, so the event name has
+  # to be part of the key too — otherwise a nightly run and a post-merge run
+  # cancel each other out and a real regression could be masked.
+  group: e2e-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    if: github.repository == 'smileidentity/smileid-sdk-php'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+      - name: Run live e2e test
+        env:
+          SMILE_PARTNER_ID: ${{ secrets.SMILE_PARTNER_ID }}
+          SMILE_API_KEY: ${{ secrets.SMILE_API_KEY }}
+          SMILE_BASE_URL: ${{ secrets.SMILE_E2E_BASE_URL }}
+        # phpunit exits 0 even when the test skips (missing creds), so
+        # --fail-on-skipped/--fail-on-incomplete turn that into a failure
+        # instead of grepping the summary for a hard-coded test count.
+        run: vendor/bin/phpunit --group e2e --fail-on-skipped --fail-on-incomplete

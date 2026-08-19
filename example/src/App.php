@@ -98,7 +98,8 @@ final class App
         $command = array_shift($rest);
         // Global flags only bind before the command. Anything global that turns
         // up after it used to be dropped without a word, so `status --job-id X
-        // --base-url https://devapi...` quietly talked to the default host.
+        // --base-url https://your-environment.example.com` quietly talked to
+        // the default host.
         // ponytail: --callback-url is left out on purpose — it is also a
         // per-command flag on enhanced-kyc and replay.
         foreach ($rest as $arg) {
