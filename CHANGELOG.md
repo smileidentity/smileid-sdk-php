@@ -7,29 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+## [12.0.0] - 2026-08-20
 
-- Base URLs must now be absolute https URLs with no query or fragment, and
-  callback URLs (default and per-request) must be https. Insecure values raise
-  `ValidationError` before any request is made.
-- A 2xx response whose body is not a JSON object now raises the new
-  `UnexpectedResponseError` instead of returning empty data.
-- `job_id` and `user_id` path parameters are URL-encoded as single path
-  segments.
-- Multipart filenames and content types are sanitized against header
-  injection.
-- Removed the client-side `comparison_image_type` enum check: the server owns
-  that validation.
-
-- Renamed the Composer package from `smile-identity/core` to `smileid/smileid`.
-  The `SmileIdentity\` namespace is unchanged.
-- Set the SDK version to 12.0.0, aligning the server SDKs with the V12 mobile
-  SDKs.
+First public release of the Smile ID PHP SDK.
 
 ### Added
 
-- Initial implementation of the Smile ID V3 server-side SDK: all 14 public
-  operations, internal JWT auth with caching and refresh-on-401, always-on
-  telemetry headers, typed
-  error hierarchy, idempotent-only retries, and a `waitUntilComplete` polling
-  helper.
+- Enhanced KYC: verify an ID number against the issuing authority.
+- Biometric KYC: verify a selfie against the photo on file with an ID
+  authority.
+- Document verification and enhanced document verification: verify a selfie
+  and liveness images against a photo ID document, with an optional
+  authority check.
+- Biometric enrollment, authentication, and selfie compare.
+- Job status retrieval, with a `waitUntilComplete` helper that polls until a
+  job reaches a terminal state.
+- Callback replay for a completed verification.
+- Sandbox and production environments, with a `baseUrl` override for any
+  other host.
+- A typed error hierarchy, all extending `SmileIdentity\Errors\SmileIDError`.
+
+[Unreleased]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.0.0...HEAD
+[12.0.0]: https://github.com/smileidentity/smileid-sdk-php/releases/tag/v12.0.0
