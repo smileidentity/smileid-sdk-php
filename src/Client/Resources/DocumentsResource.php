@@ -16,8 +16,9 @@ use SmileIdentity\Helpers\UserDetails;
 /**
  * documents.verify → POST /v3/document_verification
  * documents.verifyEnhanced → POST /v3/enhanced_document_verification
+ * documents.verifyResidency → POST /v3/residency_document_verification
  *
- * Both require the SmileID-Partner-ID header.
+ * All require the SmileID-Partner-ID header.
  */
 final class DocumentsResource
 {
@@ -105,6 +106,54 @@ final class DocumentsResource
             metadata: $metadata,
             userId: $userId,
         );
+    }
+
+    /**
+     * Residency document verification: a passport plus the visa endorsed in it.
+     * The API requires id_type PASSPORT, so it is not a parameter here.
+     *
+     * @param BinaryInput|string|resource $selfieImage
+     * @param array<int, BinaryInput|string|resource> $livenessImages 6–8 images
+     * @param BinaryInput|string|resource $document
+     * @param BinaryInput|string|resource $visa
+     * @param array<string, mixed> $userDetails
+     * @param BinaryInput|string|resource|null $documentBack
+     * @param array<string, mixed>|null $partnerParams
+     * @param array<int, mixed>|null $metadata
+     */
+    public function verifyResidency(
+        mixed $selfieImage,
+        array $livenessImages,
+        mixed $document,
+        mixed $visa,
+        Consent $consent,
+        string $country,
+        array $userDetails,
+        mixed $documentBack = null,
+        ?string $callbackUrl = null,
+        ?array $partnerParams = null,
+        ?array $metadata = null,
+        ?string $userId = null,
+    ): AcceptedResponse {
+        UserDetails::validate($userDetails);
+        Url::requireHttpsCallback($callbackUrl);
+
+        $data = Operations::residencyDocumentVerification($this->transport, [
+            'country' => $country,
+            'id_type' => 'PASSPORT',
+            'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
+            'selfie_image' => $selfieImage,
+            'document' => $document,
+            'document_back' => $documentBack,
+            'visa' => $visa,
+            'liveness_images' => $livenessImages,
+            'user_details' => $userDetails,
+            'consent' => $consent,
+            'partner_params' => $partnerParams,
+            'metadata' => $metadata,
+        ], $userId);
+
+        return AcceptedResponse::fromArray($data);
     }
 
     /**

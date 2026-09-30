@@ -148,6 +148,22 @@ $accepted = $smile->documents->verifyEnhanced(
 );
 ```
 
+### Residency document verification
+
+Verify a selfie against a passport and read the visa endorsed in it. The passport and visa are separate images, and the API fixes `idType` to `PASSPORT`. The result arrives by callback.
+
+```php
+$accepted = $smile->documents->verifyResidency(
+    selfieImage: '/tmp/selfie.jpg',
+    livenessImages: glob('/tmp/liveness/*.jpg'),
+    document: '/tmp/passport.jpg',
+    visa: '/tmp/visa.jpg',
+    consent: $consent,
+    country: 'ZA',
+    userDetails: $userDetails,
+);
+```
+
 ### Biometric KYC
 
 Verify a selfie against the photo on file with an ID authority.

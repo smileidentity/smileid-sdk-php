@@ -82,6 +82,30 @@ final class Operations
      *
      * @return array<string, mixed>
      */
+    public static function residencyDocumentVerification(Transport $transport, array $args, ?string $userIdHeader): array
+    {
+        $parts = self::scalarParts($args, ['country', 'id_type', 'callback_url']);
+        $parts = array_merge($parts, self::binaryParts($args, ['selfie_image', 'document', 'document_back', 'visa']));
+        $parts = array_merge($parts, self::livenessParts($args));
+        $parts = array_merge($parts, self::jsonParts($args));
+
+        return $transport->send(new ApiRequest(
+            method: 'POST',
+            path: '/v3/residency_document_verification',
+            authenticated: true,
+            idempotent: false,
+            needsPartnerIdHeader: true,
+            userIdHeader: $userIdHeader,
+            multipart: $parts,
+            bodyKind: ApiRequest::BODY_MULTIPART,
+        ));
+    }
+
+    /**
+     * @param EntryArgs $args
+     *
+     * @return array<string, mixed>
+     */
     public static function biometricKyc(Transport $transport, array $args, ?string $userIdHeader): array
     {
         $parts = self::scalarParts($args, ['country', 'id_type', 'id_number', 'sandbox_result', 'callback_url']);
@@ -345,8 +369,8 @@ final class Operations
             if ($value === null) {
                 continue;
             }
-            // document/document_back may be image/jpeg or image/png; the rest are jpeg only.
-            $allowPng = $field === 'document' || $field === 'document_back';
+            // document/document_back/visa may be image/jpeg or image/png; the rest are jpeg only.
+            $allowPng = $field === 'document' || $field === 'document_back' || $field === 'visa';
             $parts[] = BinaryInput::coerce($value)->toMultipartPart($field, $field . '.jpg', 'image/jpeg', $allowPng);
         }
 

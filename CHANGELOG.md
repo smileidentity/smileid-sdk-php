@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Residency document verification: `documents->verifyResidency()` submits a
+  passport and its visa to `/v3/residency_document_verification`.
+
 ## [12.0.0] - 2026-08-20
 
 First public release of the Smile ID PHP SDK.
