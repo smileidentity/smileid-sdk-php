@@ -150,7 +150,7 @@ $accepted = $smile->documents->verifyEnhanced(
 
 ### Residency document verification
 
-Verify a selfie against a passport and read the visa endorsed in it. The passport and visa are separate images, and the API fixes `idType` to `PASSPORT`. The result arrives by callback.
+Verify a selfie against a passport and read the visa endorsed in it. The passport and visa are separate images, and `idType` is optional and defaults to `PASSPORT`, the only value the API accepts. Any other value throws a `ValidationError` before the request is sent. The result arrives by callback.
 
 ```php
 $accepted = $smile->documents->verifyResidency(

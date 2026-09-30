@@ -198,6 +198,27 @@ final class GoldenFixtureTest extends TestCase
         self::assertCount(6, MultipartParser::named($parts, 'liveness_images'));
     }
 
+    public function testResidencyDocumentVerificationRejectsOtherIdTypes(): void
+    {
+        $mock = new MockClient([MockClient::tokenResponse()]);
+
+        try {
+            $mock->client->documents->verifyResidency(
+                selfieImage: self::FAKE_JPEG,
+                livenessImages: $this->livenessImages(6),
+                document: self::FAKE_JPEG,
+                visa: self::FAKE_JPEG,
+                consent: $this->consent(),
+                country: 'ZA',
+                userDetails: $this->userDetails(),
+                idType: 'NATIONAL_ID',
+            );
+            self::fail('Expected ValidationError');
+        } catch (\SmileIdentity\Errors\ValidationError $e) {
+            self::assertStringContainsString('PASSPORT', $e->getMessage());
+        }
+    }
+
     public function testBiometricKycGoldenRequest(): void
     {
         $mock = new MockClient([MockClient::tokenResponse(), MockClient::acceptedResponse('accepted')]);

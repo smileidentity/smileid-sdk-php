@@ -7,6 +7,7 @@ namespace SmileIdentity\Client\Resources;
 use SmileIdentity\Client\Config;
 use SmileIdentity\Client\Transport;
 use SmileIdentity\Consent;
+use SmileIdentity\Errors\ValidationError;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\BinaryInput;
@@ -110,7 +111,7 @@ final class DocumentsResource
 
     /**
      * Residency document verification: a passport plus the visa endorsed in it.
-     * The API requires id_type PASSPORT, so it is not a parameter here.
+     * The API accepts only id_type PASSPORT, which is the default.
      *
      * @param BinaryInput|string|resource $selfieImage
      * @param array<int, BinaryInput|string|resource> $livenessImages 6–8 images
@@ -129,18 +130,22 @@ final class DocumentsResource
         Consent $consent,
         string $country,
         array $userDetails,
+        string $idType = 'PASSPORT',
         mixed $documentBack = null,
         ?string $callbackUrl = null,
         ?array $partnerParams = null,
         ?array $metadata = null,
         ?string $userId = null,
     ): AcceptedResponse {
+        if ($idType !== 'PASSPORT') {
+            throw new ValidationError('idType must be PASSPORT for residency document verification.');
+        }
         UserDetails::validate($userDetails);
         Url::requireHttpsCallback($callbackUrl);
 
         $data = Operations::residencyDocumentVerification($this->transport, [
             'country' => $country,
-            'id_type' => 'PASSPORT',
+            'id_type' => $idType,
             'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
             'selfie_image' => $selfieImage,
             'document' => $document,
