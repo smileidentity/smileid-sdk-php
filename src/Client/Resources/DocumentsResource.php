@@ -7,6 +7,7 @@ namespace SmileIdentity\Client\Resources;
 use SmileIdentity\Client\Config;
 use SmileIdentity\Client\Transport;
 use SmileIdentity\Consent;
+use SmileIdentity\Errors\ValidationError;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\BinaryInput;
@@ -16,8 +17,9 @@ use SmileIdentity\Helpers\UserDetails;
 /**
  * documents.verify → POST /v3/document_verification
  * documents.verifyEnhanced → POST /v3/enhanced_document_verification
+ * documents.verifyResidency → POST /v3/residency_document_verification
  *
- * Both require the SmileID-Partner-ID header.
+ * All require the SmileID-Partner-ID header.
  */
 final class DocumentsResource
 {
@@ -105,6 +107,58 @@ final class DocumentsResource
             metadata: $metadata,
             userId: $userId,
         );
+    }
+
+    /**
+     * Residency document verification: a passport plus the visa endorsed in it.
+     * The API accepts only id_type PASSPORT, which is the default.
+     *
+     * @param BinaryInput|string|resource $selfieImage
+     * @param array<int, BinaryInput|string|resource> $livenessImages 6–8 images
+     * @param BinaryInput|string|resource $document
+     * @param BinaryInput|string|resource $visa
+     * @param array<string, mixed> $userDetails
+     * @param BinaryInput|string|resource|null $documentBack
+     * @param array<string, mixed>|null $partnerParams
+     * @param array<int, mixed>|null $metadata
+     */
+    public function verifyResidency(
+        mixed $selfieImage,
+        array $livenessImages,
+        mixed $document,
+        mixed $visa,
+        Consent $consent,
+        string $country,
+        array $userDetails,
+        string $idType = 'PASSPORT',
+        mixed $documentBack = null,
+        ?string $callbackUrl = null,
+        ?array $partnerParams = null,
+        ?array $metadata = null,
+        ?string $userId = null,
+    ): AcceptedResponse {
+        if ($idType !== 'PASSPORT') {
+            throw new ValidationError('idType must be PASSPORT for residency document verification.');
+        }
+        UserDetails::validate($userDetails);
+        Url::requireHttpsCallback($callbackUrl);
+
+        $data = Operations::residencyDocumentVerification($this->transport, [
+            'country' => $country,
+            'id_type' => $idType,
+            'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
+            'selfie_image' => $selfieImage,
+            'document' => $document,
+            'document_back' => $documentBack,
+            'visa' => $visa,
+            'liveness_images' => $livenessImages,
+            'user_details' => $userDetails,
+            'consent' => $consent,
+            'partner_params' => $partnerParams,
+            'metadata' => $metadata,
+        ], $userId);
+
+        return AcceptedResponse::fromArray($data);
     }
 
     /**

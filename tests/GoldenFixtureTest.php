@@ -173,6 +173,52 @@ final class GoldenFixtureTest extends TestCase
         self::assertCount(6, MultipartParser::named($parts, 'liveness_images'));
     }
 
+    public function testResidencyDocumentVerificationGoldenRequest(): void
+    {
+        $mock = new MockClient([MockClient::tokenResponse(), MockClient::acceptedResponse('accepted')]);
+
+        $mock->client->documents->verifyResidency(
+            selfieImage: self::FAKE_JPEG,
+            livenessImages: $this->livenessImages(6),
+            document: self::FAKE_JPEG,
+            visa: BinaryInput::fromString("\x89PNG\r\n\x1a\nfake-visa", 'visa.png'),
+            consent: $this->consent(),
+            country: 'ZA',
+            userDetails: $this->userDetails(),
+        );
+
+        $request = $mock->request(1);
+        self::assertSame('https://testapi.smileidentity.com/v3/residency_document_verification', (string) $request->getUri());
+        self::assertSame('1234', $request->getHeaderLine('SmileID-Partner-ID'));
+
+        $parts = MultipartParser::parse($request);
+        self::assertSame('PASSPORT', MultipartParser::named($parts, 'id_type')[0]['body']);
+        self::assertSame('image/png', MultipartParser::named($parts, 'visa')[0]['contentType']);
+        self::assertCount(1, MultipartParser::named($parts, 'document'));
+        self::assertCount(6, MultipartParser::named($parts, 'liveness_images'));
+    }
+
+    public function testResidencyDocumentVerificationRejectsOtherIdTypes(): void
+    {
+        $mock = new MockClient([MockClient::tokenResponse()]);
+
+        try {
+            $mock->client->documents->verifyResidency(
+                selfieImage: self::FAKE_JPEG,
+                livenessImages: $this->livenessImages(6),
+                document: self::FAKE_JPEG,
+                visa: self::FAKE_JPEG,
+                consent: $this->consent(),
+                country: 'ZA',
+                userDetails: $this->userDetails(),
+                idType: 'NATIONAL_ID',
+            );
+            self::fail('Expected ValidationError');
+        } catch (\SmileIdentity\Errors\ValidationError $e) {
+            self::assertStringContainsString('PASSPORT', $e->getMessage());
+        }
+    }
+
     public function testBiometricKycGoldenRequest(): void
     {
         $mock = new MockClient([MockClient::tokenResponse(), MockClient::acceptedResponse('accepted')]);
