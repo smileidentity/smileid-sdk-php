@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.1.0] - 2026-10-01
+
 ### Added
 
 - Residency document verification: `documents->verifyResidency()` submits a
@@ -32,5 +34,6 @@ First public release of the Smile ID PHP SDK.
   other host.
 - A typed error hierarchy, all extending `SmileIdentity\Errors\SmileIDError`.
 
-[Unreleased]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.0.0...HEAD
+[Unreleased]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.1.0...HEAD
+[12.1.0]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.0.0...v12.1.0
 [12.0.0]: https://github.com/smileidentity/smileid-sdk-php/releases/tag/v12.0.0
