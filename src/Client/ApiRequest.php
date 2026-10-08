@@ -9,7 +9,8 @@ namespace SmileIdentity\Client;
  * generated operation functions and consumed by {@see Transport}.
  *
  * The transport layer owns auth, telemetry, and retries; this object
- * only carries what is specific to the operation.
+ * only carries what is specific to the operation, including the claims
+ * (product, user_id, use_enrolled_image) bound into its token.
  */
 final class ApiRequest
 {
@@ -30,6 +31,9 @@ final class ApiRequest
         public readonly array $query = [],
         public readonly array $multipart = [],
         public readonly string $bodyKind = self::BODY_NONE,
+        public readonly ?string $product = null,
+        public readonly ?string $tokenUserId = null,
+        public readonly bool $useEnrolledImage = false,
     ) {
     }
 }

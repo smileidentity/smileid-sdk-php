@@ -7,6 +7,7 @@ namespace SmileIdentity\Client\Resources;
 use SmileIdentity\Client\Config;
 use SmileIdentity\Client\Transport;
 use SmileIdentity\Consent;
+use SmileIdentity\Errors\ValidationError;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Operations\Operations;
 use SmileIdentity\Helpers\BinaryInput;
@@ -23,20 +24,25 @@ final class BiometricKycResource
     }
 
     /**
-     * @param BinaryInput|string|resource $selfieImage
-     * @param array<int, BinaryInput|string|resource> $livenessImages 6–8 images
+     * With `useEnrolledImage: true` the job verifies against `userId`'s enrolled
+     * selfie, so the selfie and liveness images may be omitted. The grant is
+     * bound into this job's token, which names `userId`.
+     *
+     * @param BinaryInput|string|resource|null $selfieImage required unless useEnrolledImage
+     * @param array<int, BinaryInput|string|resource>|null $livenessImages 6–8 images, required unless useEnrolledImage
      * @param array<string, mixed> $userDetails
      * @param array<string, mixed>|null $partnerParams
      * @param array<int, mixed>|null $metadata
      */
     public function verify(
-        mixed $selfieImage,
-        array $livenessImages,
         Consent $consent,
         string $country,
         string $idType,
         string $idNumber,
         array $userDetails,
+        mixed $selfieImage = null,
+        ?array $livenessImages = null,
+        bool $useEnrolledImage = false,
         ?string $callbackUrl = null,
         int|float|null $sandboxResult = null,
         ?array $partnerParams = null,
@@ -46,6 +52,14 @@ final class BiometricKycResource
         UserDetails::validate($userDetails);
         Url::requireHttpsCallback($callbackUrl);
 
+        if ($useEnrolledImage) {
+            if ($userId === null || $userId === '') {
+                throw new ValidationError('user_id is required when use_enrolled_image is true.');
+            }
+        } elseif ($selfieImage === null || $livenessImages === null || $livenessImages === []) {
+            throw new ValidationError('selfie_image and liveness_images are required unless use_enrolled_image is true.');
+        }
+
         $data = Operations::biometricKyc($this->transport, [
             'country' => $country,
             'id_type' => $idType,
@@ -54,6 +68,7 @@ final class BiometricKycResource
             'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
             'selfie_image' => $selfieImage,
             'liveness_images' => $livenessImages,
+            'use_enrolled_image' => $useEnrolledImage,
             'user_details' => $userDetails,
             'consent' => $consent,
             'partner_params' => $partnerParams,

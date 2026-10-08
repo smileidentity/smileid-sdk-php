@@ -12,8 +12,8 @@ use SmileIdentity\Tests\Support\MultipartParser;
 
 /**
  * Client-side validation: user_details email-or-phone rule, report_fraud
- * conditional reason/notes rules, authentication requires images unless
- * use_enrolled_image. All raise before any HTTP request is sent.
+ * conditional reason/notes rules, authentication requires images, biometric KYC
+ * requires images unless use_enrolled_image. All raise before any HTTP request is sent.
  */
 final class ValidationTest extends TestCase
 {
@@ -137,7 +137,7 @@ final class ValidationTest extends TestCase
         self::assertCount(0, MultipartParser::named($parts, 'reason'));
     }
 
-    public function testAuthenticateRequiresImagesUnlessEnrolledImage(): void
+    public function testAuthenticateRequiresImages(): void
     {
         $mock = new MockClient([]);
 
@@ -149,7 +149,48 @@ final class ValidationTest extends TestCase
             );
             self::fail('Expected ValidationError');
         } catch (ValidationError $e) {
-            self::assertStringContainsString('use_enrolled_image', $e->getMessage());
+            self::assertStringContainsString('selfie_image', $e->getMessage());
+        }
+
+        self::assertCount(0, $mock->history);
+    }
+
+    public function testBiometricKycRequiresImagesUnlessEnrolledImage(): void
+    {
+        $mock = new MockClient([]);
+
+        try {
+            $mock->client->biometricKyc->verify(
+                consent: $this->consent(),
+                country: 'NG',
+                idType: 'NIN',
+                idNumber: '12345678901',
+                userDetails: ['given_names' => 'John', 'last_name' => 'Doe', 'email' => 'john@example.com'],
+            );
+            self::fail('Expected ValidationError');
+        } catch (ValidationError $e) {
+            self::assertStringContainsString('selfie_image', $e->getMessage());
+        }
+
+        self::assertCount(0, $mock->history);
+    }
+
+    public function testBiometricKycEnrolledImageRequiresUserId(): void
+    {
+        $mock = new MockClient([]);
+
+        try {
+            $mock->client->biometricKyc->verify(
+                consent: $this->consent(),
+                country: 'NG',
+                idType: 'NIN',
+                idNumber: '12345678901',
+                userDetails: ['given_names' => 'John', 'last_name' => 'Doe', 'email' => 'john@example.com'],
+                useEnrolledImage: true,
+            );
+            self::fail('Expected ValidationError');
+        } catch (ValidationError $e) {
+            self::assertStringContainsString('user_id', $e->getMessage());
         }
 
         self::assertCount(0, $mock->history);

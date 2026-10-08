@@ -66,8 +66,8 @@ final class BiometricResource
 
     /**
      * @param array<string, mixed> $userDetails
-     * @param BinaryInput|string|resource|null $selfieImage required unless useEnrolledImage
-     * @param array<int, BinaryInput|string|resource>|null $livenessImages required unless useEnrolledImage
+     * @param BinaryInput|string|resource|null $selfieImage required
+     * @param array<int, BinaryInput|string|resource>|null $livenessImages required
      * @param array<string, mixed>|null $partnerParams
      * @param array<int, mixed>|null $metadata
      */
@@ -77,7 +77,6 @@ final class BiometricResource
         array $userDetails,
         mixed $selfieImage = null,
         ?array $livenessImages = null,
-        ?bool $useEnrolledImage = null,
         ?string $callbackUrl = null,
         int|float|null $sandboxResult = null,
         ?array $partnerParams = null,
@@ -86,15 +85,12 @@ final class BiometricResource
         UserDetails::validate($userDetails);
         Url::requireHttpsCallback($callbackUrl);
 
-        if ($useEnrolledImage !== true) {
-            if ($selfieImage === null || $livenessImages === null || $livenessImages === []) {
-                throw new ValidationError('selfie_image and liveness_images are required unless use_enrolled_image is true.');
-            }
+        if ($selfieImage === null || $livenessImages === null || $livenessImages === []) {
+            throw new ValidationError('selfie_image and liveness_images are required.');
         }
 
         $data = Operations::authentication($this->transport, [
             'user_id_body' => $userId,
-            'use_enrolled_image' => $useEnrolledImage,
             'sandbox_result' => $sandboxResult,
             'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
             'selfie_image' => $selfieImage,

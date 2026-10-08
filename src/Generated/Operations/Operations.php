@@ -50,6 +50,8 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
+            product: 'enhanced_kyc',
+            tokenUserId: $userIdHeader,
         ));
     }
 
@@ -74,6 +76,8 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
+            product: $enhanced ? 'enhanced_document_verification' : 'document_verification',
+            tokenUserId: $userIdHeader,
         ));
     }
 
@@ -98,6 +102,8 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
+            product: 'residency_document_verification',
+            tokenUserId: $userIdHeader,
         ));
     }
 
@@ -122,6 +128,9 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
+            product: 'biometric_kyc',
+            tokenUserId: $userIdHeader,
+            useEnrolledImage: ($args['use_enrolled_image'] ?? false) === true,
         ));
     }
 
@@ -145,6 +154,8 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
+            product: 'smart_selfie_registration',
+            tokenUserId: $userIdHeader,
         ));
     }
 
@@ -156,7 +167,7 @@ final class Operations
     public static function authentication(Transport $transport, array $args): array
     {
         // user_id is a required BODY field here, not the User-ID header.
-        $parts = self::scalarParts($args, ['user_id_body', 'use_enrolled_image', 'sandbox_result', 'callback_url']);
+        $parts = self::scalarParts($args, ['user_id_body', 'sandbox_result', 'callback_url']);
         $parts = array_merge($parts, self::binaryParts($args, ['selfie_image']));
         $parts = array_merge($parts, self::livenessParts($args));
         $parts = array_merge($parts, self::jsonParts($args));
@@ -168,6 +179,8 @@ final class Operations
             idempotent: false,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
+            product: 'smart_selfie_authentication',
+            tokenUserId: $args['user_id_body'] ?? null,
         ));
     }
 
@@ -191,6 +204,8 @@ final class Operations
             idempotent: false,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
+            product: 'smart_selfie_compare',
+            tokenUserId: $args['user_id_body'] ?? null,
         ));
     }
 
