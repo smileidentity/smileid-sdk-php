@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.2.0] - 2026-10-08
+
+### Changed
+
+- Each request mints its own token, bound to that request's `user_id` and
+  product, instead of reusing one cached token. A 401 is no longer retried with
+  a refreshed token.
+- A `userId` that is empty or padded with whitespace raises `ValidationError`
+  before any request is sent.
+- `biometric->authenticate` takes `selfieImage` and `livenessImages` as required
+  arguments.
+
+### Added
+
+- `biometricKyc->verify(useEnrolledImage: true, userId: ...)` verifies against
+  the user's enrolled selfie; the grant is bound into the job's token and the
+  selfie and liveness images may be omitted.
+
+### Removed
+
+- `useEnrolledImage` from `biometric->authenticate`; selfie and liveness images
+  are now always required.
+
 ## [12.1.0] - 2026-10-01
 
 ### Added
@@ -34,6 +57,7 @@ First public release of the Smile ID PHP SDK.
   other host.
 - A typed error hierarchy, all extending `SmileIdentity\Errors\SmileIDError`.
 
-[Unreleased]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.1.0...HEAD
+[Unreleased]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.2.0...HEAD
+[12.2.0]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.1.0...v12.2.0
 [12.1.0]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.0.0...v12.1.0
 [12.0.0]: https://github.com/smileidentity/smileid-sdk-php/releases/tag/v12.0.0

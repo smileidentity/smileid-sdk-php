@@ -290,19 +290,22 @@ final class GoldenFixtureTest extends TestCase
         self::assertSame('user_01h8x9y2z3a4b5c6d7e8f9g0h1', $userId[0]['body']);
     }
 
-    public function testAuthenticationWithEnrolledImageSkipsImages(): void
+    public function testBiometricKycWithEnrolledImageSkipsImages(): void
     {
         $mock = new MockClient([MockClient::tokenResponse(), MockClient::acceptedResponse()]);
 
-        $mock->client->biometric->authenticate(
-            userId: 'user_01h8x9y2z3a4b5c6d7e8f9g0h1',
+        $mock->client->biometricKyc->verify(
             consent: $this->consent(),
+            country: 'NG',
+            idType: 'BVN',
+            idNumber: '12345678901',
             userDetails: $this->userDetails(),
             useEnrolledImage: true,
+            userId: 'user_01h8x9y2z3a4b5c6d7e8f9g0h1',
         );
 
         $parts = MultipartParser::parse($mock->request(1));
-        self::assertSame('true', MultipartParser::named($parts, 'use_enrolled_image')[0]['body']);
+        self::assertCount(0, MultipartParser::named($parts, 'use_enrolled_image'));
         self::assertCount(0, MultipartParser::named($parts, 'selfie_image'));
         self::assertCount(0, MultipartParser::named($parts, 'liveness_images'));
     }
