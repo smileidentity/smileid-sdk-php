@@ -66,8 +66,8 @@ final class BiometricResource
 
     /**
      * @param array<string, mixed> $userDetails
-     * @param BinaryInput|string|resource|null $selfieImage required
-     * @param array<int, BinaryInput|string|resource>|null $livenessImages required
+     * @param BinaryInput|string|resource|null $selfieImage required; null raises ValidationError
+     * @param array<int, BinaryInput|string|resource> $livenessImages 6–8 images
      * @param array<string, mixed>|null $partnerParams
      * @param array<int, mixed>|null $metadata
      */
@@ -75,8 +75,8 @@ final class BiometricResource
         string $userId,
         Consent $consent,
         array $userDetails,
-        mixed $selfieImage = null,
-        ?array $livenessImages = null,
+        mixed $selfieImage,
+        array $livenessImages,
         ?string $callbackUrl = null,
         int|float|null $sandboxResult = null,
         ?array $partnerParams = null,
@@ -85,7 +85,7 @@ final class BiometricResource
         UserDetails::validate($userDetails);
         Url::requireHttpsCallback($callbackUrl);
 
-        if ($selfieImage === null || $livenessImages === null || $livenessImages === []) {
+        if ($selfieImage === null || $livenessImages === []) {
             throw new ValidationError('selfie_image and liveness_images are required.');
         }
 

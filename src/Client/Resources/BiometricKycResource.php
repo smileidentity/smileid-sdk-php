@@ -30,6 +30,7 @@ final class BiometricKycResource
      *
      * @param BinaryInput|string|resource|null $selfieImage required unless useEnrolledImage
      * @param array<int, BinaryInput|string|resource>|null $livenessImages 6–8 images, required unless useEnrolledImage
+     * @param bool $useEnrolledImage only a literal true grants
      * @param array<string, mixed> $userDetails
      * @param array<string, mixed>|null $partnerParams
      * @param array<int, mixed>|null $metadata
@@ -42,13 +43,16 @@ final class BiometricKycResource
         array $userDetails,
         mixed $selfieImage = null,
         ?array $livenessImages = null,
-        bool $useEnrolledImage = false,
+        mixed $useEnrolledImage = false,
         ?string $callbackUrl = null,
         int|float|null $sandboxResult = null,
         ?array $partnerParams = null,
         ?array $metadata = null,
         ?string $userId = null,
     ): AcceptedResponse {
+        if (!is_bool($useEnrolledImage)) {
+            throw new ValidationError('use_enrolled_image must be a bool.');
+        }
         UserDetails::validate($userDetails);
         Url::requireHttpsCallback($callbackUrl);
 
@@ -60,7 +64,7 @@ final class BiometricKycResource
             throw new ValidationError('selfie_image and liveness_images are required unless use_enrolled_image is true.');
         }
 
-        $data = Operations::biometricKyc($this->transport, [
+        $data = Operations::biometricKyc($useEnrolledImage ? $this->transport->withEnrolledImageGrant() : $this->transport, [
             'country' => $country,
             'id_type' => $idType,
             'id_number' => $idNumber,
@@ -68,7 +72,6 @@ final class BiometricKycResource
             'callback_url' => $callbackUrl ?? $this->config->defaultCallbackUrl,
             'selfie_image' => $selfieImage,
             'liveness_images' => $livenessImages,
-            'use_enrolled_image' => $useEnrolledImage,
             'user_details' => $userDetails,
             'consent' => $consent,
             'partner_params' => $partnerParams,

@@ -22,7 +22,7 @@ use SmileIdentity\Helpers\Multipart;
  * @phpstan-type EntryArgs array{
  *     country?: ?string, id_type?: ?string, id_number?: ?string,
  *     bank_code?: ?string, operator?: ?string, comparison_image_type?: ?string,
- *     allow_new_enroll?: ?bool, use_enrolled_image?: ?bool, user_id_body?: ?string,
+ *     allow_new_enroll?: ?bool, user_id_body?: ?string,
  *     sandbox_result?: int|float|null, callback_url?: ?string,
  *     user_details: array<string, mixed>, consent: Consent,
  *     partner_params?: ?array<string, mixed>, metadata?: ?array<int, mixed>,
@@ -50,8 +50,6 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
-            product: 'enhanced_kyc',
-            tokenUserId: $userIdHeader,
         ));
     }
 
@@ -76,8 +74,6 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
-            product: $enhanced ? 'enhanced_document_verification' : 'document_verification',
-            tokenUserId: $userIdHeader,
         ));
     }
 
@@ -102,8 +98,6 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
-            product: 'residency_document_verification',
-            tokenUserId: $userIdHeader,
         ));
     }
 
@@ -128,9 +122,6 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
-            product: 'biometric_kyc',
-            tokenUserId: $userIdHeader,
-            useEnrolledImage: ($args['use_enrolled_image'] ?? false) === true,
         ));
     }
 
@@ -154,8 +145,6 @@ final class Operations
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
-            product: 'smart_selfie_registration',
-            tokenUserId: $userIdHeader,
         ));
     }
 
@@ -179,8 +168,6 @@ final class Operations
             idempotent: false,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
-            product: 'smart_selfie_authentication',
-            tokenUserId: $args['user_id_body'] ?? null,
         ));
     }
 
@@ -204,8 +191,6 @@ final class Operations
             idempotent: false,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
-            product: 'smart_selfie_compare',
-            tokenUserId: $args['user_id_body'] ?? null,
         ));
     }
 

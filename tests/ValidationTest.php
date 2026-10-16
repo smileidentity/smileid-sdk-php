@@ -146,6 +146,8 @@ final class ValidationTest extends TestCase
                 userId: 'user-123',
                 consent: $this->consent(),
                 userDetails: ['given_names' => 'John', 'last_name' => 'Doe', 'email' => 'john@example.com'],
+                selfieImage: "\xFF\xD8\xFF\xE0fake-jpeg-bytes",
+                livenessImages: [],
             );
             self::fail('Expected ValidationError');
         } catch (ValidationError $e) {

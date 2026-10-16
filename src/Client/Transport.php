@@ -9,10 +9,10 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\MultipartStream;
 use Psr\Http\Message\ResponseInterface;
-use SmileIdentity\Errors\AuthenticationError;
 use SmileIdentity\Errors\ConnectionError;
 use SmileIdentity\Errors\ErrorFactory;
 use SmileIdentity\Errors\UnexpectedResponseError;
+use SmileIdentity\Errors\ValidationError;
 use SmileIdentity\Helpers\Multipart;
 use SmileIdentity\Version;
 
@@ -25,8 +25,23 @@ final class Transport
 {
     private const RETRYABLE_STATUSES = [408, 429, 500, 502, 503, 504];
 
+    // Mirrors the API authorizer: a token bound to a product is accepted only on
+    // that product's endpoint. Paths absent here mint a token with no claims.
+    private const PRODUCT_BY_PATH = [
+        '/v3/enhanced_kyc' => 'enhanced_kyc',
+        '/v3/document_verification' => 'document_verification',
+        '/v3/enhanced_document_verification' => 'enhanced_document_verification',
+        '/v3/residency_document_verification' => 'residency_document_verification',
+        '/v3/biometric_kyc' => 'biometric_kyc',
+        '/v3/registration' => 'smart_selfie_registration',
+        '/v3/authentication' => 'smart_selfie_authentication',
+        '/v3/compare' => 'smart_selfie_compare',
+    ];
+
     /** @var \Closure(float): void */
     private readonly \Closure $sleeper;
+
+    private bool $useEnrolledImage = false;
 
     public function __construct(
         private readonly Config $config,
@@ -38,6 +53,18 @@ final class Transport
                 usleep((int) ($seconds * 1_000_000));
             }
         };
+    }
+
+    /**
+     * A transport whose tokens carry the use_enrolled_image grant, authorising a
+     * captureless Biometric KYC; the grant is never sent in the job body.
+     */
+    public function withEnrolledImageGrant(): self
+    {
+        $granted = clone $this;
+        $granted->useEnrolledImage = true;
+
+        return $granted;
     }
 
     /**
@@ -151,14 +178,20 @@ final class Transport
      */
     private function mintToken(ApiRequest $request): string
     {
+        $product = self::PRODUCT_BY_PATH[$request->path] ?? null;
+        $userId = $product !== null ? self::jobUserId($request) : null;
+        if ($this->useEnrolledImage && $userId === null) {
+            throw new ValidationError('user_id is required when use_enrolled_image is true.');
+        }
+
         $parts = [];
-        if ($request->tokenUserId !== null) {
-            $parts[] = Multipart::scalar('user_id', $request->tokenUserId);
+        if ($userId !== null) {
+            $parts[] = Multipart::scalar('user_id', $userId);
         }
-        if ($request->product !== null) {
-            $parts[] = Multipart::scalar('product', $request->product);
+        if ($product !== null) {
+            $parts[] = Multipart::scalar('product', $product);
         }
-        if ($request->useEnrolledImage) {
+        if ($this->useEnrolledImage) {
             $parts[] = Multipart::scalar('use_enrolled_image', true);
         }
 
@@ -200,7 +233,7 @@ final class Transport
                 $data = self::decodeSuccess($status, $raw, $response);
                 $token = $data['token'] ?? null;
                 if (!is_string($token) || $token === '') {
-                    throw new AuthenticationError('Token endpoint returned no token.', statusCode: $status, rawBody: $raw);
+                    throw new UnexpectedResponseError('Token endpoint returned no token.', statusCode: $status, rawBody: $raw);
                 }
 
                 return $token;
@@ -214,6 +247,29 @@ final class Transport
 
             throw ErrorFactory::fromResponse($status, $raw, $response->getReasonPhrase(), self::lowercaseHeaders($response));
         }
+    }
+
+    /**
+     * The user a job names, from its User-ID header or its user_id body part.
+     * The API trims the header but not the token's user_id claim, so a padded id
+     * would mint a token for a different user than the job names.
+     */
+    private static function jobUserId(ApiRequest $request): ?string
+    {
+        $userId = $request->userIdHeader;
+        if ($userId === null) {
+            foreach ($request->multipart as $part) {
+                if (($part['name'] ?? null) === 'user_id') {
+                    $userId = (string) $part['contents'];
+                    break;
+                }
+            }
+        }
+        if ($userId !== null && ($userId === '' || $userId !== trim($userId))) {
+            throw new ValidationError('user_id must not be empty or padded with whitespace.');
+        }
+
+        return $userId;
     }
 
     /**

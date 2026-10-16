@@ -21,7 +21,7 @@ composer require smileid/usesmileid
 
 ## Create a client
 
-Construct one client with your partner ID and API key. Before each request the SDK fetches a short-lived access token bound to that request's user and product — you never handle tokens yourself.
+Construct one client with your partner ID and API key. Before each request the SDK fetches a short-lived access token. A verification job's token is bound to that job's product and, when the job names one, its user; other calls get a token with neither. You never handle tokens yourself.
 
 ```php
 use SmileIdentity\Client;

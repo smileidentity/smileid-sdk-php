@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Each request mints its own token, bound to that request's `user_id` and
   product, instead of reusing one cached token. A 401 is no longer retried with
   a refreshed token.
+- A `userId` that is empty or padded with whitespace raises `ValidationError`
+  before any request is sent.
+- `biometric->authenticate` takes `selfieImage` and `livenessImages` as required
+  arguments.
 
 ### Added
 
