@@ -21,7 +21,7 @@ composer require smileid/usesmileid
 
 ## Create a client
 
-Construct one client with your partner ID and API key. The SDK fetches and refreshes its own access token — you never handle tokens yourself.
+Construct one client with your partner ID and API key. Before each request the SDK fetches a short-lived access token. A verification job's token is bound to that job's product and, when the job names one, its user; other calls get a token with neither. You never handle tokens yourself.
 
 ```php
 use SmileIdentity\Client;
@@ -180,6 +180,20 @@ $accepted = $smile->biometricKyc->verify(
 );
 ```
 
+To verify against a user's enrolled selfie instead of a fresh capture, pass `useEnrolledImage: true` and the enrolled `userId`; the selfie and liveness images may then be omitted.
+
+```php
+$accepted = $smile->biometricKyc->verify(
+    useEnrolledImage: true,
+    userId: 'user-123',
+    consent: $consent,
+    country: 'NG',
+    idType: 'BVN',
+    idNumber: '12345678901',
+    userDetails: $userDetails,
+);
+```
+
 ### Biometric enrollment
 
 Register a user's selfie for later authentication.
@@ -196,7 +210,7 @@ $accepted = $smile->biometric->enroll(
 
 ### Biometric authentication
 
-Authenticate a returning user against their enrolled selfie. `userId` must match an enrollee. Pass `useEnrolledImage: true` to skip new images.
+Authenticate a returning user against a fresh selfie and liveness capture. `userId` must match an enrollee.
 
 ```php
 $accepted = $smile->biometric->authenticate(
@@ -333,7 +347,7 @@ try {
 | --- | --- |
 | `InvalidRequestError` | HTTP 400 or 415 |
 | `ValidationError` | client-side validation, before anything is sent |
-| `AuthenticationError` | HTTP 401 after one token refresh attempt |
+| `AuthenticationError` | HTTP 401 |
 | `PaymentRequiredError` | HTTP 402, insufficient wallet balance |
 | `PermissionError` | HTTP 403 |
 | `NotFoundError` | HTTP 404 (except `verifications->retrieve`) |
@@ -347,7 +361,7 @@ try {
 
 ## Retries
 
-The SDK retries idempotent operations only: status and services reads, and its internal token fetch. It retries on connection errors, 408, 429 and 5xx, honours the `Retry-After` header, and never retries a 409. Verification submissions are never retried automatically — a connection failure surfaces as `ConnectionError` and you decide whether to resubmit.
+The SDK retries idempotent operations only: status and services reads, and the token fetch made before each request. It retries on connection errors, 408, 429 and 5xx, honours the `Retry-After` header, and never retries a 409. Verification submissions are never retried automatically — a connection failure surfaces as `ConnectionError` and you decide whether to resubmit.
 
 ## Telemetry
 

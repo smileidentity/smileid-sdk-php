@@ -36,7 +36,9 @@ final class WaitUntilCompleteTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             $this->jobStatusResponse('processing'),
+            MockClient::tokenResponse(),
             $this->jobStatusResponse('processing'),
+            MockClient::tokenResponse(),
             $this->jobStatusResponse('clear'),
         ]);
 
@@ -46,7 +48,7 @@ final class WaitUntilCompleteTest extends TestCase
         self::assertSame('clear', $status->status);
         // Two sleeps of the polling interval between the three polls.
         self::assertSame([2.0, 2.0], $mock->sleeps);
-        self::assertCount(4, $mock->history);
+        self::assertCount(6, $mock->history);
     }
 
     public function testReturnsOnBlock(): void
@@ -54,6 +56,7 @@ final class WaitUntilCompleteTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             $this->jobStatusResponse('processing'),
+            MockClient::tokenResponse(),
             $this->jobStatusResponse('block'),
         ]);
 
@@ -61,7 +64,7 @@ final class WaitUntilCompleteTest extends TestCase
 
         self::assertTrue($status->isComplete);
         self::assertSame('block', $status->status);
-        self::assertCount(3, $mock->history);
+        self::assertCount(4, $mock->history);
     }
 
     public function testNotFoundIsPendingByDefault(): void
@@ -69,13 +72,14 @@ final class WaitUntilCompleteTest extends TestCase
         $mock = new MockClient([
             MockClient::tokenResponse(),
             $this->jobStatusResponse('not_found'),
+            MockClient::tokenResponse(),
             $this->jobStatusResponse('clear'),
         ]);
 
         $status = $mock->client->verifications->waitUntilComplete('job_1');
 
         self::assertTrue($status->isComplete);
-        self::assertCount(3, $mock->history);
+        self::assertCount(4, $mock->history);
     }
 
     public function testNotFoundReturnsImmediatelyWhenNotPending(): void

@@ -9,11 +9,11 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\MultipartStream;
 use Psr\Http\Message\ResponseInterface;
-use SmileIdentity\Client\Auth\TokenManager;
-use SmileIdentity\Errors\AuthenticationError;
 use SmileIdentity\Errors\ConnectionError;
 use SmileIdentity\Errors\ErrorFactory;
 use SmileIdentity\Errors\UnexpectedResponseError;
+use SmileIdentity\Errors\ValidationError;
+use SmileIdentity\Helpers\Multipart;
 use SmileIdentity\Version;
 
 /**
@@ -25,9 +25,23 @@ final class Transport
 {
     private const RETRYABLE_STATUSES = [408, 429, 500, 502, 503, 504];
 
-    private readonly TokenManager $tokenManager;
+    // Mirrors the API authorizer: a token bound to a product is accepted only on
+    // that product's endpoint. Paths absent here mint a token with no claims.
+    private const PRODUCT_BY_PATH = [
+        '/v3/enhanced_kyc' => 'enhanced_kyc',
+        '/v3/document_verification' => 'document_verification',
+        '/v3/enhanced_document_verification' => 'enhanced_document_verification',
+        '/v3/residency_document_verification' => 'residency_document_verification',
+        '/v3/biometric_kyc' => 'biometric_kyc',
+        '/v3/registration' => 'smart_selfie_registration',
+        '/v3/authentication' => 'smart_selfie_authentication',
+        '/v3/compare' => 'smart_selfie_compare',
+    ];
+
     /** @var \Closure(float): void */
     private readonly \Closure $sleeper;
+
+    private bool $useEnrolledImage = false;
 
     public function __construct(
         private readonly Config $config,
@@ -39,12 +53,18 @@ final class Transport
                 usleep((int) ($seconds * 1_000_000));
             }
         };
-        $this->tokenManager = new TokenManager(fn (): string => $this->fetchToken());
     }
 
-    public function tokenManager(): TokenManager
+    /**
+     * A transport whose tokens carry the use_enrolled_image grant, authorising a
+     * captureless Biometric KYC; the grant is never sent in the job body.
+     */
+    public function withEnrolledImageGrant(): self
     {
-        return $this->tokenManager;
+        $granted = clone $this;
+        $granted->useEnrolledImage = true;
+
+        return $granted;
     }
 
     /**
@@ -57,11 +77,11 @@ final class Transport
      */
     public function send(ApiRequest $request, array $nonErrorStatuses = []): array
     {
-        $refreshedOn401 = false;
+        $token = $request->authenticated ? $this->mintToken($request) : null;
         $attempt = 0;
 
         while (true) {
-            [$headers, $body] = $this->prepare($request);
+            [$headers, $body] = $this->prepare($request, $token);
 
             try {
                 $response = $this->dispatch($request, $headers, $body);
@@ -81,12 +101,6 @@ final class Transport
 
             if (($status >= 200 && $status < 300) || in_array($status, $nonErrorStatuses, true)) {
                 return self::decodeSuccess($status, $raw, $response);
-            }
-
-            if ($status === 401 && $request->authenticated && !$refreshedOn401) {
-                $refreshedOn401 = true;
-                $this->tokenManager->invalidate();
-                continue;
             }
 
             if ($request->idempotent
@@ -112,12 +126,12 @@ final class Transport
      *
      * @return array{0: array<string, string>, 1: ?string}
      */
-    private function prepare(ApiRequest $request): array
+    private function prepare(ApiRequest $request, ?string $token): array
     {
         $headers = $this->telemetryHeaders();
 
-        if ($request->authenticated) {
-            $headers['SmileID-Token'] = $this->tokenManager->ensureToken();
+        if ($token !== null) {
+            $headers['SmileID-Token'] = $token;
         }
         if ($request->needsPartnerIdHeader) {
             $headers['SmileID-Partner-ID'] = $this->config->partnerId;
@@ -157,10 +171,30 @@ final class Transport
     }
 
     /**
-     * Fetch a fresh JWT from POST /v3/token (idempotent, retryable, no token).
+     * Mint a JWT from POST /v3/token bound to this one request's user, product
+     * and grant (idempotent, retryable, no token). Tokens are never shared
+     * between requests: a use_enrolled_image grant authorises a captureless job
+     * for one user and must not reach any other call.
      */
-    private function fetchToken(): string
+    private function mintToken(ApiRequest $request): string
     {
+        $product = self::PRODUCT_BY_PATH[$request->path] ?? null;
+        $userId = $product !== null ? self::jobUserId($request) : null;
+        if ($this->useEnrolledImage && $userId === null) {
+            throw new ValidationError('user_id is required when use_enrolled_image is true.');
+        }
+
+        $parts = [];
+        if ($userId !== null) {
+            $parts[] = Multipart::scalar('user_id', $userId);
+        }
+        if ($product !== null) {
+            $parts[] = Multipart::scalar('product', $product);
+        }
+        if ($this->useEnrolledImage) {
+            $parts[] = Multipart::scalar('use_enrolled_image', true);
+        }
+
         // The token endpoint documents lowercase header names; send verbatim.
         $attempt = 0;
         while (true) {
@@ -168,13 +202,19 @@ final class Transport
                 'smileid-partner-id' => $this->config->partnerId,
                 'smileid-api-key' => $this->config->apiKey,
             ]);
+            $options = [
+                'http_errors' => false,
+                'timeout' => $this->config->timeout,
+            ];
+            if ($parts !== []) {
+                $stream = new MultipartStream($parts);
+                $headers['Content-Type'] = 'multipart/form-data; boundary=' . $stream->getBoundary();
+                $options['body'] = (string) $stream;
+            }
+            $options['headers'] = $headers;
 
             try {
-                $response = $this->httpClient->request('POST', $this->config->baseUrl . '/v3/token', [
-                    'headers' => $headers,
-                    'http_errors' => false,
-                    'timeout' => $this->config->timeout,
-                ]);
+                $response = $this->httpClient->request('POST', $this->config->baseUrl . '/v3/token', $options);
             } catch (ConnectException $e) {
                 if ($attempt < $this->config->maxRetries) {
                     ++$attempt;
@@ -193,7 +233,7 @@ final class Transport
                 $data = self::decodeSuccess($status, $raw, $response);
                 $token = $data['token'] ?? null;
                 if (!is_string($token) || $token === '') {
-                    throw new AuthenticationError('Token endpoint returned no token.', statusCode: $status, rawBody: $raw);
+                    throw new UnexpectedResponseError('Token endpoint returned no token.', statusCode: $status, rawBody: $raw);
                 }
 
                 return $token;
@@ -207,6 +247,29 @@ final class Transport
 
             throw ErrorFactory::fromResponse($status, $raw, $response->getReasonPhrase(), self::lowercaseHeaders($response));
         }
+    }
+
+    /**
+     * The user a job names, from its User-ID header or its user_id body part.
+     * The API trims the header but not the token's user_id claim, so a padded id
+     * would mint a token for a different user than the job names.
+     */
+    private static function jobUserId(ApiRequest $request): ?string
+    {
+        $userId = $request->userIdHeader;
+        if ($userId === null) {
+            foreach ($request->multipart as $part) {
+                if (($part['name'] ?? null) === 'user_id') {
+                    $userId = (string) $part['contents'];
+                    break;
+                }
+            }
+        }
+        if ($userId !== null && ($userId === '' || $userId !== trim($userId))) {
+            throw new ValidationError('user_id must not be empty or padded with whitespace.');
+        }
+
+        return $userId;
     }
 
     /**

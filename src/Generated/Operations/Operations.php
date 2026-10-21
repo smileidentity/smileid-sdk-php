@@ -22,7 +22,7 @@ use SmileIdentity\Helpers\Multipart;
  * @phpstan-type EntryArgs array{
  *     country?: ?string, id_type?: ?string, id_number?: ?string,
  *     bank_code?: ?string, operator?: ?string, comparison_image_type?: ?string,
- *     allow_new_enroll?: ?bool, use_enrolled_image?: ?bool, user_id_body?: ?string,
+ *     allow_new_enroll?: ?bool, user_id_body?: ?string,
  *     sandbox_result?: int|float|null, callback_url?: ?string,
  *     user_details: array<string, mixed>, consent: Consent,
  *     partner_params?: ?array<string, mixed>, metadata?: ?array<int, mixed>,
@@ -156,7 +156,7 @@ final class Operations
     public static function authentication(Transport $transport, array $args): array
     {
         // user_id is a required BODY field here, not the User-ID header.
-        $parts = self::scalarParts($args, ['user_id_body', 'use_enrolled_image', 'sandbox_result', 'callback_url']);
+        $parts = self::scalarParts($args, ['user_id_body', 'sandbox_result', 'callback_url']);
         $parts = array_merge($parts, self::binaryParts($args, ['selfie_image']));
         $parts = array_merge($parts, self::livenessParts($args));
         $parts = array_merge($parts, self::jsonParts($args));

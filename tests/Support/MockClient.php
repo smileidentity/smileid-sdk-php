@@ -19,7 +19,7 @@ use SmileIdentity\Client;
  */
 final class MockClient
 {
-    /** @var list<array{request: RequestInterface, response: mixed}> */
+    /** @var list<array{request: RequestInterface, response: mixed, options: array<string, mixed>}> */
     public array $history = [];
 
     public readonly Client $client;
@@ -64,14 +64,16 @@ final class MockClient
         return $this->history[array_key_last($this->history)]['request'];
     }
 
-    /** A 200 token response whose JWT carries an exp one hour in the future. */
-    public static function tokenResponse(?int $exp = null): Response
+    /** A 200 token response; without an explicit token, a JWT whose exp is one hour out. */
+    public static function tokenResponse(?int $exp = null, ?string $token = null): Response
     {
-        $exp ??= time() + 3600;
-        $payload = rtrim(strtr(base64_encode((string) json_encode(['exp' => $exp])), '+/', '-_'), '=');
-        $jwt = 'header.' . $payload . '.signature';
+        if ($token === null) {
+            $exp ??= time() + 3600;
+            $payload = rtrim(strtr(base64_encode((string) json_encode(['exp' => $exp])), '+/', '-_'), '=');
+            $token = 'header.' . $payload . '.signature';
+        }
 
-        return new Response(200, [], (string) json_encode(['token' => $jwt]));
+        return new Response(200, [], (string) json_encode(['token' => $token]));
     }
 
     public static function acceptedResponse(string $status = 'Accepted'): Response
