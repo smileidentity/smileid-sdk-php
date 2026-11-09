@@ -10,7 +10,8 @@
 #
 #   composer install -d tools/backward-compatibility-check
 #
-# The check compares the latest stable v* tag with HEAD. Breaks that are
+# The check compares the newest stable vX.Y.Z tag reachable from <base-ref>
+# with HEAD. Breaks that are
 # already on <base-ref> (merged but not yet released) are reported as a
 # warning, not a failure, so a pull request only fails for breaks it adds.
 # Those merged breaks still need a major release; release.yml enforces that.
@@ -35,7 +36,8 @@ fi
 
 cd "$ROOT"
 
-TAG=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+# The newest stable release tag that is an ancestor of the base branch.
+TAG=$("$ROOT/scripts/previous-release-tag.sh" "$BASE")
 if [ -z "$TAG" ]; then
   echo "::notice title=api-compat::No v* release tag yet, so there is no public API to compare with."
   exit 0
