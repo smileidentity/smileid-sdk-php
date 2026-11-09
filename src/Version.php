@@ -6,5 +6,5 @@ namespace SmileIdentity;
 
 final class Version
 {
-    public const VERSION = '12.2.0';
+    public const VERSION = '13.0.0';
 }
