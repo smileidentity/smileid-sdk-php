@@ -24,6 +24,16 @@ or directly:
 vendor/bin/phpunit
 ```
 
+## Quality gates
+
+`.github/workflows/quality-gates.yml` runs on every pull request:
+
+- `api-compat` compares the public API with the latest `v*` tag using `roave/backward-compatibility-check`. A new break fails unless the PR has the `breaking` label. Run it locally with `composer install -d tools/backward-compatibility-check` (PHP 8.4 or later) and `scripts/check-api-compat.sh origin/main`.
+- `coverage` uploads Cobertura XML as the `coverage` artifact and requires 100% line coverage of `src/Generated/`. On bot PRs (labelled `spec-sync`, `parity-port` or `release`, or opened by a `[bot]` account) it also requires every changed line to be covered and blocks new coverage exclusions (`scripts/check-coverage-exclusions.sh`). Don't add exclusions; add tests.
+- `release-scripts` tests `scripts/bump-version.sh <major|minor|patch>`, which updates the version files and cuts the changelog's Unreleased section.
+
+`release.yml` refuses a tag that is not a major bump when a PR labelled `breaking` merged since the previous tag, and a major bump when none did.
+
 ## Org-wide agent conventions
 
 For conventions that apply across Smile ID repositories, see [smileidentity/agents](https://github.com/smileidentity/agents) (private repo, internal contributors only).

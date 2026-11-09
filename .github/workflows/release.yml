@@ -15,8 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Compare tag to src/Version.php
         run: |
           set -euo pipefail
@@ -44,6 +47,42 @@ jobs:
             exit 1
           fi
           echo "CHANGELOG.md has an entry for $TAG_VERSION"
+      - name: Check the major version matches breaking PRs
+        # A PR merged since the previous tag with the `breaking` label needs a
+        # major version bump, and a major bump needs at least one such PR.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PREV_TAG=$(git tag --list 'v*' --sort=-v:refname --merged "${GITHUB_REF_NAME}^" \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+          if [ -z "$PREV_TAG" ]; then
+            echo "No earlier v* release tag, so there is no version to compare with."
+            exit 0
+          fi
+          PREV_MAJOR="${PREV_TAG#v}"
+          PREV_MAJOR="${PREV_MAJOR%%.*}"
+          NEW_MAJOR="${TAG_VERSION%%.*}"
+          SINCE=$(git log -1 --format=%cI "$PREV_TAG")
+          BREAKING=$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --base main \
+            --label breaking --search "merged:>=$SINCE" --limit 100 \
+            --json number,title --jq '.[] | "#\(.number) \(.title)"')
+          if [ -n "$BREAKING" ]; then
+            echo "PRs labelled breaking merged since $PREV_TAG ($SINCE):"
+            echo "$BREAKING"
+          else
+            echo "No PRs labelled breaking merged since $PREV_TAG ($SINCE)."
+          fi
+          if [ -n "$BREAKING" ] && [ "$NEW_MAJOR" -le "$PREV_MAJOR" ]; then
+            echo "::error::PRs labelled breaking merged since $PREV_TAG, so v$TAG_VERSION must be a new major version (greater than $PREV_MAJOR)."
+            exit 1
+          fi
+          if [ -z "$BREAKING" ] && [ "$NEW_MAJOR" -gt "$PREV_MAJOR" ]; then
+            echo "::error::v$TAG_VERSION is a major version bump from $PREV_TAG, but no PR labelled breaking merged since then. Label the breaking PR, or release a minor or patch version."
+            exit 1
+          fi
+          echo "v$TAG_VERSION is consistent with the breaking PRs since $PREV_TAG."
 
   # composer.json has no "version" field (Packagist infers it from the git
   # tag) so there is nothing to guard there. src/Version.php is the actual
