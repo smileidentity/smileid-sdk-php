@@ -19,7 +19,7 @@
             "options": {
                 "symlink": true,
                 "versions": {
-                    "smileid/usesmileid": "12.2.0"
+                    "smileid/usesmileid": "13.0.0"
                 }
             }
         }
