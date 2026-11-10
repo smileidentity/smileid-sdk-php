@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [12.2.0] - 2026-10-08
+## [13.0.0] - 2026-11-09
+
+This is a major version because it changes the public API of 12.1.0. Version
+12.2.0 was never published; its changes ship in this release.
+
+### Breaking changes
+
+- `biometricKyc->verify` now takes `consent`, `country`, `idType`, `idNumber`
+  and `userDetails` first, and the images are optional. Call it with named
+  arguments.
+- `biometric->authenticate` no longer takes `useEnrolledImage`, and
+  `selfieImage` and `livenessImages` are required. Pass both images, or use
+  `biometricKyc->verify(useEnrolledImage: true, userId: ...)` instead.
+- `SmileIdentity\Client\Auth\TokenManager` and `Transport::tokenManager()` are
+  removed. The client now mints a token for each request; remove any code that
+  used them.
+- A 401 response now raises `AuthenticationError` straight away instead of
+  retrying with a new token. Check your API key and partner ID if you see one.
 
 ### Changed
 
@@ -57,7 +74,7 @@ First public release of the Smile ID PHP SDK.
   other host.
 - A typed error hierarchy, all extending `SmileIdentity\Errors\SmileIDError`.
 
-[Unreleased]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.2.0...HEAD
-[12.2.0]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.1.0...v12.2.0
+[Unreleased]: https://github.com/smileidentity/smileid-sdk-php/compare/v13.0.0...HEAD
+[13.0.0]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.1.0...v13.0.0
 [12.1.0]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.0.0...v12.1.0
 [12.0.0]: https://github.com/smileidentity/smileid-sdk-php/releases/tag/v12.0.0
