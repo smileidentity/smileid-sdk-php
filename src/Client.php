@@ -7,6 +7,7 @@ namespace SmileIdentity;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\ClientInterface;
 use SmileIdentity\Client\Config;
+use SmileIdentity\Client\Resources\AmlResource;
 use SmileIdentity\Client\Resources\BiometricKycResource;
 use SmileIdentity\Client\Resources\BiometricResource;
 use SmileIdentity\Client\Resources\DocumentsResource;
@@ -34,6 +35,7 @@ final class Client
     public readonly VerificationsResource $verifications;
     public readonly UsersResource $users;
     public readonly ServicesResource $services;
+    public readonly AmlResource $aml;
 
     /**
      * @param 'sandbox'|'production'|string $environment
@@ -74,5 +76,6 @@ final class Client
         $this->verifications = new VerificationsResource($this->transport, $sleeper);
         $this->users = new UsersResource($this->transport);
         $this->services = new ServicesResource($this->transport);
+        $this->aml = new AmlResource($this->transport, $this->config);
     }
 }

@@ -322,6 +322,53 @@ $idStatus = $smile->services->idStatus(country: 'NG', idType: 'NIN');
 $idStatus->lastKnownStatus;   // "online"
 ```
 
+### AML screening
+
+Screen a name against sanctions, PEP and adverse-media lists. `countries` is a list of uppercase ISO 3166-1 alpha-2 codes. The result goes to your callback URL.
+
+```php
+$accepted = $smile->aml->oneTime(
+    countries: ['NG', 'KE'],
+    fullName: 'John Doe',
+    userDetails: $userDetails,
+    consent: $consent,
+);
+```
+
+`oneTimeSync` takes the same arguments and returns the result in the response, so you need no callback endpoint. Pass an `idempotencyKey` (16 to 128 characters of `A-Z a-z 0-9 - _`) so a retry returns the original result. The SDK retries a timed-out call only when you pass a key.
+
+```php
+$result = $smile->aml->oneTimeSync(
+    countries: ['NG'],
+    fullName: 'John Doe',
+    userDetails: $userDetails,
+    consent: $consent,
+    idempotencyKey: 'onboarding-8f14e45fceea167a',
+);
+
+$result->status;            // "clear", "attention", "block" or "error"
+$result->noOfPersonsFound;  // 0
+```
+
+`monitoring` screens a name and enrols it for ongoing monitoring. `monitoringNews` reads the adverse-media articles for one person in a monitoring job.
+
+```php
+$accepted = $smile->aml->monitoring(
+    countries: ['NG'],
+    userDetails: $userDetails,
+    consent: $consent,
+    fullName: 'Jane Doe',
+);
+
+$news = $smile->aml->monitoringNews(
+    jobId: $accepted->jobId,
+    reference: 'ref_001',
+    newsCategory: 'financial_crime',
+    page: 1,
+    limit: 25,
+);
+```
+
 ## Error handling
 
 Every error the SDK throws extends `SmileIdentity\Errors\SmileIDError`, which extends `\Exception`. Catch the base class to handle everything, or a subclass to handle one case:
