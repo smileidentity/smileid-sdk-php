@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<roave-bc-check
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="tools/backward-compatibility-check/vendor/roave/backward-compatibility-check/Resources/schema.xsd">
+    <baseline>
+        <!-- The version constant changes on every release; that is not a break. -->
+        <ignored-regex>#\[BC\] CHANGED: Value of constant SmileIdentity\\Version::VERSION changed#</ignored-regex>
+    </baseline>
+</roave-bc-check>

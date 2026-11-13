@@ -15,13 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: Compare tag to src/Version.php
         run: |
           set -euo pipefail
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          SRC_VERSION=$(grep -oP "VERSION\s*=\s*'\K[^']+" src/Version.php | head -n1 || true)
+          SRC_VERSION=$(grep -m1 -oP "VERSION\s*=\s*'\K[^']+" src/Version.php || true)
           if [ -z "$SRC_VERSION" ]; then
             echo "::error::Could not read SmileIdentity\\Version::VERSION from src/Version.php"
             exit 1
@@ -44,6 +47,12 @@ jobs:
             exit 1
           fi
           echo "CHANGELOG.md has an entry for $TAG_VERSION"
+      - name: Check the major version matches breaking PRs
+        # PRs labelled `breaking` among the commits since the previous stable
+        # tag need a major version bump, and a major bump needs at least one.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: scripts/check-release-breaking.sh "$GITHUB_REF_NAME"
 
   # composer.json has no "version" field (Packagist infers it from the git
   # tag) so there is nothing to guard there. src/Version.php is the actual

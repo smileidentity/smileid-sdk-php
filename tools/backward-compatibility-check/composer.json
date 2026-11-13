@@ -1,0 +1,12 @@
+{
+    "name": "smileid/backward-compatibility-check-tool",
+    "description": "Isolated install of roave/backward-compatibility-check, kept apart from the SDK's own dependencies.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "roave/backward-compatibility-check": "^8.0"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

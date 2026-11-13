@@ -1,0 +1,116 @@
+name: quality-gates
+
+on:
+  pull_request:
+    # labeled/unlabeled re-run the gates when `breaking` or a bot label changes.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+
+concurrency:
+  group: quality-gates-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # A bot PR carries spec-sync, parity-port or release, or is opened by a bot.
+  # Some gates fail only on bot PRs and only report on other PRs.
+  BOT_PR: ${{ contains(github.event.pull_request.labels.*.name, 'spec-sync') || contains(github.event.pull_request.labels.*.name, 'parity-port') || contains(github.event.pull_request.labels.*.name, 'release') || endsWith(github.event.pull_request.user.login, '[bot]') }}
+  BASE_REF: ${{ github.base_ref || 'main' }}
+
+jobs:
+  api-compat:
+    name: api-compat
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          # roave/backward-compatibility-check needs PHP 8.4 or later.
+          php-version: '8.4'
+          extensions: bcmath, intl
+          coverage: none
+      - name: Install roave/backward-compatibility-check
+        run: composer install --prefer-dist --no-progress -d tools/backward-compatibility-check
+      - name: Compare the public API with the latest release tag
+        env:
+          BREAKING_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'breaking') }}
+        run: |
+          set -uo pipefail
+          status=0
+          scripts/check-api-compat.sh "origin/$BASE_REF" || status=$?
+          if [ "$status" -eq 3 ]; then
+            if [ "$BREAKING_LABEL" = "true" ]; then
+              echo "::notice title=api-compat::This PR breaks the public API and is labelled breaking. The next release must be a major version."
+              exit 0
+            fi
+            echo "::error title=api-compat::This PR breaks the public API. Remove the break, or add the breaking label if it is intended."
+            exit 1
+          fi
+          exit "$status"
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: '8.3'
+          coverage: pcov
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+      - name: Run tests with coverage
+        run: vendor/bin/phpunit --coverage-cobertura build/coverage/cobertura.xml
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: build/coverage/cobertura.xml
+          if-no-files-found: error
+      - name: Require 100% line coverage of src/Generated
+        run: php scripts/check-generated-coverage.php build/coverage/cobertura.xml src/Generated 100
+      - name: Install diff-cover
+        run: pipx install diff-cover==10.6.0
+      - name: Require 100% coverage of changed lines (enforced on bot PRs)
+        run: |
+          set -uo pipefail
+          status=0
+          diff-cover build/coverage/cobertura.xml --compare-branch="origin/$BASE_REF" --fail-under=100 || status=$?
+          if [ "$status" -ne 0 ]; then
+            if [ "$BOT_PR" = "true" ]; then
+              echo "::error title=coverage::Changed lines are not fully covered. Bot PRs must cover every changed line."
+              exit "$status"
+            fi
+            echo "::warning title=coverage::Changed lines are not fully covered. This is enforced only on bot PRs."
+          fi
+      - name: Block added coverage exclusions (enforced on bot PRs)
+        run: |
+          set -uo pipefail
+          status=0
+          scripts/check-coverage-exclusions.sh "origin/$BASE_REF" || status=$?
+          if [ "$status" -ne 0 ]; then
+            if [ "$BOT_PR" = "true" ]; then
+              echo "::error title=coverage::Bot PRs may not add coverage exclusions."
+              exit "$status"
+            fi
+            echo "::warning title=coverage::This PR adds coverage exclusions. This is blocked only on bot PRs."
+          fi
+
+  scripts:
+    name: scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run shellcheck
+        run: shellcheck scripts/*.sh scripts/tests/*.sh
+      - name: Test scripts/bump-version.sh
+        run: scripts/tests/bump-version-test.sh
+      - name: Test release tag selection and the breaking-change release rule
+        run: scripts/tests/release-tags-test.sh
+      - name: Test scripts/check-coverage-exclusions.sh
+        run: scripts/tests/check-coverage-exclusions-test.sh
