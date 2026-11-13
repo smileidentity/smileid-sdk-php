@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `aml->oneTime` for `POST /v3/aml`, and `aml->oneTimeSync` for `POST /v3/aml/sync`,
+  which returns the screening result in the response and accepts an
+  `idempotencyKey`.
+- `aml->monitoring` for `POST /v3/aml/monitoring`, and `aml->monitoringNews` for
+  `GET /v3/aml/monitoring/{job_id}/news/{reference}`.
+
 ## [13.0.0] - 2026-11-09
 
 This is a major version because it changes the public API of 12.1.0. Version

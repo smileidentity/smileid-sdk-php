@@ -140,6 +140,10 @@ final class Transport
             $headers['User-ID'] = $request->userIdHeader;
         }
 
+        if ($request->idempotencyKey !== null) {
+            $headers['SmileID-Idempotency-Key'] = $request->idempotencyKey;
+        }
+
         $body = null;
         if ($request->bodyKind === ApiRequest::BODY_MULTIPART) {
             $stream = new MultipartStream(self::rewindResources($request->multipart));
