@@ -20,39 +20,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Compare tag to src/Version.php
-        run: |
-          set -euo pipefail
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          SRC_VERSION=$(grep -m1 -oP "VERSION\s*=\s*'\K[^']+" src/Version.php || true)
-          if [ -z "$SRC_VERSION" ]; then
-            echo "::error::Could not read SmileIdentity\\Version::VERSION from src/Version.php"
-            exit 1
-          fi
-          if [ "$TAG_VERSION" != "$SRC_VERSION" ]; then
-            echo "::error::Tag is v$TAG_VERSION but src/Version.php declares $SRC_VERSION. Update the VERSION constant before tagging."
-            exit 1
-          fi
-          echo "Tag v$TAG_VERSION matches src/Version.php"
-      - name: Check CHANGELOG.md has an entry for this version
-        run: |
-          set -euo pipefail
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          if [ ! -f CHANGELOG.md ]; then
-            echo "::error::CHANGELOG.md not found at repository root."
-            exit 1
-          fi
-          if ! grep -qF "## [$TAG_VERSION]" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md has no '## [$TAG_VERSION]' heading. Add a changelog entry before tagging."
-            exit 1
-          fi
-          echo "CHANGELOG.md has an entry for $TAG_VERSION"
-      - name: Check the major version matches breaking PRs
-        # PRs labelled `breaking` among the commits since the previous stable
-        # tag need a major version bump, and a major bump needs at least one.
+      - name: Run the release guards
+        # Version.php and CHANGELOG.md match the tag, and the major version
+        # matches the PRs labelled `breaking` since the previous stable tag.
+        # quality-gates.yml runs the same script on release pull requests, so
+        # a failure here should already have shown up before the tag.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: scripts/check-release-breaking.sh "$GITHUB_REF_NAME"
+        run: scripts/check-release.sh "$GITHUB_REF_NAME"
 
   # composer.json has no "version" field (Packagist infers it from the git
   # tag) so there is nothing to guard there. src/Version.php is the actual
