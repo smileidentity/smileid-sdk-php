@@ -25,19 +25,6 @@ final class Transport
 {
     private const RETRYABLE_STATUSES = [408, 429, 500, 502, 503, 504];
 
-    // Mirrors the API authorizer: a token bound to a product is accepted only on
-    // that product's endpoint. Paths absent here mint a token with no claims.
-    private const PRODUCT_BY_PATH = [
-        '/v3/enhanced_kyc' => 'enhanced_kyc',
-        '/v3/document_verification' => 'document_verification',
-        '/v3/enhanced_document_verification' => 'enhanced_document_verification',
-        '/v3/residency_document_verification' => 'residency_document_verification',
-        '/v3/biometric_kyc' => 'biometric_kyc',
-        '/v3/registration' => 'smart_selfie_registration',
-        '/v3/authentication' => 'smart_selfie_authentication',
-        '/v3/compare' => 'smart_selfie_compare',
-    ];
-
     /** @var \Closure(float): void */
     private readonly \Closure $sleeper;
 
@@ -178,7 +165,7 @@ final class Transport
      */
     private function mintToken(ApiRequest $request): string
     {
-        $product = self::PRODUCT_BY_PATH[$request->path] ?? null;
+        $product = $request->product;
         $userId = $product !== null ? self::jobUserId($request) : null;
         if ($this->useEnrolledImage && $userId === null) {
             throw new ValidationError('user_id is required when use_enrolled_image is true.');

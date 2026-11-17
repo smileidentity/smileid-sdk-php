@@ -45,6 +45,7 @@ final class Operations
         return $transport->send(new ApiRequest(
             method: 'POST',
             path: '/v3/enhanced_kyc',
+            product: 'enhanced_kyc',
             authenticated: true,
             idempotent: false,
             userIdHeader: $userIdHeader,
@@ -68,6 +69,7 @@ final class Operations
         return $transport->send(new ApiRequest(
             method: 'POST',
             path: $enhanced ? '/v3/enhanced_document_verification' : '/v3/document_verification',
+            product: $enhanced ? 'enhanced_document_verification' : 'document_verification',
             authenticated: true,
             idempotent: false,
             needsPartnerIdHeader: true,
@@ -92,6 +94,7 @@ final class Operations
         return $transport->send(new ApiRequest(
             method: 'POST',
             path: '/v3/residency_document_verification',
+            product: 'residency_document_verification',
             authenticated: true,
             idempotent: false,
             needsPartnerIdHeader: true,
@@ -116,6 +119,7 @@ final class Operations
         return $transport->send(new ApiRequest(
             method: 'POST',
             path: '/v3/biometric_kyc',
+            product: 'biometric_kyc',
             authenticated: true,
             idempotent: false,
             needsPartnerIdHeader: true,
@@ -140,6 +144,7 @@ final class Operations
         return $transport->send(new ApiRequest(
             method: 'POST',
             path: '/v3/registration',
+            product: 'smart_selfie_registration',
             authenticated: true,
             idempotent: false,
             userIdHeader: $userIdHeader,
@@ -164,6 +169,7 @@ final class Operations
         return $transport->send(new ApiRequest(
             method: 'POST',
             path: '/v3/authentication',
+            product: 'smart_selfie_authentication',
             authenticated: true,
             idempotent: false,
             multipart: $parts,
@@ -187,6 +193,7 @@ final class Operations
         return $transport->send(new ApiRequest(
             method: 'POST',
             path: '/v3/compare',
+            product: 'smart_selfie_compare',
             authenticated: true,
             idempotent: false,
             multipart: $parts,

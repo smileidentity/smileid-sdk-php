@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The token `product` claim for each operation now comes from the spec's
+  `x-smile-token-product` extension, set on the operation's request, instead of
+  a table of paths kept in the transport. Claims are unchanged (spec v3.1188.0).
+
 ## [13.0.0] - 2026-11-09
 
 This is a major version because it changes the public API of 12.1.0. Version
