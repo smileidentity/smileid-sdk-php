@@ -2,6 +2,8 @@
 /tools/*/vendor/
 composer.phar
 composer.lock
+# The isolated tools are applications, so their lock files are committed.
+!/tools/*/composer.lock
 .phpunit.result.cache
 .php-cs-fixer.cache
 .phpunit.cache/

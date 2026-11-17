@@ -2,11 +2,13 @@
 #
 # Check that a release tag's major version matches the breaking PRs it ships.
 #
-# Usage: scripts/check-release-breaking.sh <tag>
+# Usage: scripts/check-release-breaking.sh <tag> [<rev>]
 #
-# The release contains the commits in PREV..TAG, where PREV is the newest
-# stable tag that is an ancestor of TAG (excluding TAG). Each of those commits
-# is mapped to the PRs it belongs to, and PRs labelled `breaking` are counted.
+# The release contains the commits in PREV..REV, where REV defaults to TAG and
+# PREV is the newest stable tag that is an ancestor of REV (excluding REV).
+# Pass <rev> (say HEAD) to check a release pull request before TAG exists.
+# Each of those commits is mapped to the PRs it belongs to, and PRs labelled
+# `breaking` are counted.
 #
 # - Breaking PRs and the major version did not go up: fail.
 # - Major version went up and no breaking PRs: fail, except 0.x to 1.0.0,
@@ -18,28 +20,29 @@
 
 set -euo pipefail
 
-if [ $# -ne 1 ]; then
-  echo "usage: scripts/check-release-breaking.sh <tag>" >&2
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+  echo "usage: scripts/check-release-breaking.sh <tag> [<rev>]" >&2
   exit 2
 fi
 TAG="$1"
+REV="${2:-$1}"
 HERE=$(cd "$(dirname "$0")" && pwd)
 
 if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
   echo "check-release-breaking: '$TAG' is not a vX.Y.Z tag" >&2
   exit 2
 fi
-git rev-parse --verify --quiet "$TAG^{commit}" >/dev/null || {
-  echo "check-release-breaking: unknown tag '$TAG'" >&2
+git rev-parse --verify --quiet "$REV^{commit}" >/dev/null || {
+  echo "check-release-breaking: unknown revision '$REV'" >&2
   exit 2
 }
 
 PREV=""
-if git rev-parse --verify --quiet "$TAG^^{commit}" >/dev/null; then
-  PREV=$("$HERE/previous-release-tag.sh" "$TAG^")
+if git rev-parse --verify --quiet "$REV^^{commit}" >/dev/null; then
+  PREV=$("$HERE/previous-release-tag.sh" "$REV^")
 fi
 if [ -z "$PREV" ]; then
-  echo "No earlier stable release tag behind $TAG, so there is no version to compare with."
+  echo "No earlier stable release tag behind $REV, so there is no version to compare with."
   exit 0
 fi
 
@@ -50,7 +53,7 @@ default_lookup() {
 
 LOOKUP="${RELEASE_CHECK_PR_LOOKUP:-}"
 BREAKING=""
-for sha in $(git log --format=%H "$PREV..$TAG"); do
+for sha in $(git log --format=%H "$PREV..$REV"); do
   if [ -n "$LOOKUP" ]; then
     found=$("$LOOKUP" "$sha")
   else
@@ -68,10 +71,10 @@ PREV_MAJOR="${PREV_VERSION%%.*}"
 NEW_MAJOR="${NEW_VERSION%%.*}"
 
 if [ -n "$BREAKING" ]; then
-  echo "PRs labelled breaking in $PREV..$TAG:"
+  echo "PRs labelled breaking in $PREV..$REV:"
   echo "$BREAKING"
 else
-  echo "No PRs labelled breaking in $PREV..$TAG."
+  echo "No PRs labelled breaking in $PREV..$REV."
 fi
 
 if [ -n "$BREAKING" ] && [ "$NEW_MAJOR" -le "$PREV_MAJOR" ]; then

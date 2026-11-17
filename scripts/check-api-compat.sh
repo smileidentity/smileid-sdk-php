@@ -17,7 +17,8 @@
 # Those merged breaks still need a major release; release.yml enforces that.
 #
 # Exit codes: 0 no new breaks (or no release tag yet), 3 new breaks, other
-# values for errors. Needs full history and tags (fetch-depth: 0).
+# values for errors, including Roave output this script cannot parse. Needs
+# full history and tags (fetch-depth: 0).
 
 set -euo pipefail
 
@@ -27,7 +28,8 @@ if [ $# -ne 1 ]; then
 fi
 BASE="$1"
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-BC="$ROOT/tools/backward-compatibility-check/vendor/bin/roave-backward-compatibility-check"
+# BC_CHECK_BIN replaces the Roave binary (used by the tests).
+BC="${BC_CHECK_BIN:-$ROOT/tools/backward-compatibility-check/vendor/bin/roave-backward-compatibility-check}"
 
 if [ ! -x "$BC" ]; then
   echo "check-api-compat: run 'composer install -d tools/backward-compatibility-check' first" >&2
@@ -59,7 +61,30 @@ compare() {
     echo "check-api-compat: roave-backward-compatibility-check failed with exit code $status" >&2
     exit "$status"
   fi
-  sed -n 's/^ *- \(\[BC\] .*\)$/\1/p' "$WORK/raw.md" | sort -u >"$2"
+  sed -n 's/^ *- \(\[BC\] .*\)$/\1/p' "$WORK/raw.md" >"$WORK/parsed.txt"
+  check_parsed "$status"
+  sort -u "$WORK/parsed.txt" >"$2"
+}
+
+# check_parsed <roave exit code>: fail rather than pass silently if the
+# markdown no longer looks the way this script expects. Roave logs either
+# "No backwards-incompatible changes detected" or "<n> backwards-incompatible
+# changes detected", and <n> must match the "- [BC] ..." lines we parsed.
+check_parsed() {
+  local parsed expected
+  parsed=$(wc -l <"$WORK/parsed.txt" | tr -d ' ')
+  if [ "$1" -eq 0 ] && [ "$parsed" -eq 0 ] &&
+    grep -q 'No backwards-incompatible changes detected' "$WORK/log.txt"; then
+    return 0
+  fi
+  expected=$(sed -n 's/^\([0-9][0-9]*\) backwards-incompatible changes* detected.*$/\1/p' "$WORK/log.txt" | tail -n 1)
+  if [ "$1" -eq 3 ] && [ -n "$expected" ] && [ "$parsed" -gt 0 ] && [ "$parsed" -eq "$expected" ]; then
+    return 0
+  fi
+  echo "--- roave-backward-compatibility-check output ---" >&2
+  cat "$WORK/raw.md" "$WORK/log.txt" >&2
+  echo "check-api-compat: could not parse roave-backward-compatibility-check output (exit code $1, ${expected:-no} change(s) reported, $parsed '- [BC]' line(s) parsed). Its output format may have changed; update this script." >&2
+  exit 2
 }
 
 compare "$HEAD_SHA" "$WORK/head.txt"

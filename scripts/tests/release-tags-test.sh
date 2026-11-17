@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# Tests for scripts/previous-release-tag.sh and scripts/check-release-breaking.sh.
+# Tests for scripts/previous-release-tag.sh, scripts/check-release-breaking.sh
+# and scripts/check-release.sh.
 # Builds a throwaway git repository; never touches the real one.
 #
 # Usage: scripts/tests/release-tags-test.sh
@@ -102,6 +103,53 @@ if release_check v1.0.2; then fail "backport patch with a breaking PR passed"; e
 git tag v5.0.0 v1.0.1
 if release_check v5.0.0; then fail "major bump without a breaking PR passed"; else pass "major bump without a breaking PR fails"; fi
 git tag -d v5.0.0 >/dev/null
+
+# --- check-release-breaking.sh <tag> <rev>: before the tag exists ----------
+
+git checkout -q -b pr-breaking main
+commit "breaking: #4" >/dev/null
+if "$SCRIPTS/check-release-breaking.sh" v3.1.0 HEAD >"$WORK/out" 2>&1; then
+  fail "untagged minor release containing a breaking PR passed"
+else
+  grep -q "#4" "$WORK/out" && pass "untagged minor release containing a breaking PR fails and names it" || fail "v3.1.0 HEAD output: $(cat "$WORK/out")"
+fi
+"$SCRIPTS/check-release-breaking.sh" v4.0.0 HEAD >"$WORK/out" 2>&1 && pass "untagged major release with a breaking PR passes" || fail "v4.0.0 HEAD: $(cat "$WORK/out")"
+
+# --- check-release.sh -------------------------------------------------------
+
+release_guards() {
+  "$SCRIPTS/check-release.sh" "$@" >"$WORK/out" 2>&1
+}
+# release_commit <version> <changelog heading>: a commit like bump-version.sh makes.
+release_commit() {
+  mkdir -p src
+  printf "<?php\n\nfinal class Version\n{\n    public const VERSION = '%s';\n}\n" "$1" >src/Version.php
+  printf '# Changelog\n\n## [Unreleased]\n\n%s\n\n- A fix.\n' "$2" >CHANGELOG.md
+  git add src/Version.php CHANGELOG.md
+  git commit -q -m "Release $1"
+}
+
+git checkout -q -b pr-release main
+release_commit 3.0.1 "## [3.0.1] - 2026-11-17"
+release_guards v3.0.1 HEAD && pass "release PR with matching version and dated changelog passes" || fail "v3.0.1 HEAD: $(cat "$WORK/out")"
+if release_guards v3.0.2 HEAD; then fail "release PR whose version differs from the tag passed"; else
+  grep -q "src/Version.php declares 3.0.1" "$WORK/out" && pass "release PR whose version differs from the tag fails" || fail "v3.0.2 HEAD output: $(cat "$WORK/out")"
+fi
+if release_guards v4.0.0 HEAD; then fail "release PR with a major bump and no breaking PR passed"; else pass "release PR with a major bump and no breaking PR fails"; fi
+if release_guards 3.0.1 HEAD; then fail "a tag without the v prefix passed"; else pass "a tag without the v prefix fails"; fi
+git tag v3.0.1
+if release_guards v3.0.1 HEAD; then fail "release PR for an existing tag passed"; else
+  grep -q "already exists" "$WORK/out" && pass "release PR for an existing tag fails" || fail "existing tag output: $(cat "$WORK/out")"
+fi
+release_guards v3.0.1 && pass "the pushed tag passes in release.yml mode" || fail "v3.0.1: $(cat "$WORK/out")"
+git tag -d v3.0.1 >/dev/null
+
+git checkout -q -b pr-undated main
+release_commit 3.0.1 "## [3.0.1]"
+if release_guards v3.0.1 HEAD; then fail "release PR with an undated changelog heading passed"; else
+  grep -q "no dated" "$WORK/out" && pass "release PR with an undated changelog heading fails" || fail "undated output: $(cat "$WORK/out")"
+fi
+git checkout -q main
 
 if [ "$FAILURES" -gt 0 ]; then
   echo "$FAILURES test(s) failed" >&2
