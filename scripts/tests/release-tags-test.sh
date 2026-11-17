@@ -135,7 +135,13 @@ release_guards v3.0.1 HEAD && pass "release PR with matching version and dated c
 if release_guards v3.0.2 HEAD; then fail "release PR whose version differs from the tag passed"; else
   grep -q "src/Version.php declares 3.0.1" "$WORK/out" && pass "release PR whose version differs from the tag fails" || fail "v3.0.2 HEAD output: $(cat "$WORK/out")"
 fi
-if release_guards v4.0.0 HEAD; then fail "release PR with a major bump and no breaking PR passed"; else pass "release PR with a major bump and no breaking PR fails"; fi
+# A matching 4.0.0 release commit, so only the breaking-PR rule can fail it.
+git checkout -q -b pr-major main
+release_commit 4.0.0 "## [4.0.0] - 2026-11-17"
+if release_guards v4.0.0 HEAD; then fail "release PR with a major bump and no breaking PR passed"; else
+  grep -q "no PR labelled breaking" "$WORK/out" && pass "release PR with a major bump and no breaking PR fails" || fail "v4.0.0 HEAD output: $(cat "$WORK/out")"
+fi
+git checkout -q pr-release
 if release_guards 3.0.1 HEAD; then fail "a tag without the v prefix passed"; else pass "a tag without the v prefix fails"; fi
 git tag v3.0.1
 if release_guards v3.0.1 HEAD; then fail "release PR for an existing tag passed"; else
