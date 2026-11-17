@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
 
       - name: Run Semgrep
-        # Fails on a scan error or an ERROR-severity finding. WARNING and INFO
+        # Fails on a scan error or an ERROR (or CRITICAL/HIGH) finding. Other
         # findings are advisory: they go to the uploads and the PR comment.
         shell: bash
         run: |
@@ -33,12 +33,12 @@ jobs:
             echo "::error::Semgrep exited with status $status, so the scan did not complete."
             exit "$status"
           fi
-          blocking=$(python3 -c 'import json; print(sum(r["extra"]["severity"] == "ERROR" for r in json.load(open("semgrep.json"))["results"]))') || {
+          blocking=$(python3 -c 'import json; print(sum(r["extra"].get("severity", "").upper() in {"ERROR", "CRITICAL", "HIGH"} for r in json.load(open("semgrep.json"))["results"]))') || {
             echo "::error::Could not read semgrep.json."
             exit 1
           }
           if [ "$blocking" -gt 0 ]; then
-            echo "::error::Semgrep found $blocking ERROR-severity finding(s). Fix them, or add a nosemgrep comment that says why the code is safe."
+            echo "::error::Semgrep found $blocking blocking (ERROR, CRITICAL or HIGH) finding(s). Fix them, or add a nosemgrep comment that says why the code is safe."
             exit 1
           fi
 
@@ -150,7 +150,7 @@ jobs:
               if len(findings) > 25:
                   body += f"\n*... and {len(findings) - 25} more. "
                   body += "See full results in workflow logs.*\n"
-              body += "\n> ⚠️ ERROR-severity findings fail this check. "
+              body += "\n> ⚠️ ERROR, CRITICAL and HIGH findings fail this check. "
               body += "Other findings are advisory: please review them.\n"
           else:
               body = f"{marker}\n## 🔍 Semgrep Security Scan Results\n\n"
