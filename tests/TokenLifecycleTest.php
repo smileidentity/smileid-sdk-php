@@ -260,6 +260,61 @@ final class TokenLifecycleTest extends TestCase
         self::assertSame('', (string) $mock->request(0)->getBody());
     }
 
+    /**
+     * @return array<string, array{0: string, 1: \Closure(Client): mixed}>
+     */
+    public static function amlOperations(): array
+    {
+        $consent = Consent::granted(
+            grantedAt: '2026-03-06T12:00:00.000Z',
+            noticeLanguage: 'EN',
+            noticePrivacyPolicyUrl: 'https://example.com/privacy',
+        );
+        $details = ['given_names' => 'John', 'last_name' => 'Doe', 'email' => 'john@example.com'];
+
+        return [
+            'one_time_aml' => ['one_time_aml', fn (Client $c) => $c->aml->oneTime(
+                countries: ['NG'],
+                fullName: 'John Doe',
+                userDetails: $details,
+                consent: $consent,
+                callbackUrl: 'https://example.com/callback',
+            )],
+            'one_time_aml sync' => ['one_time_aml', fn (Client $c) => $c->aml->oneTimeSync(
+                countries: ['NG'],
+                fullName: 'John Doe',
+                userDetails: $details,
+                consent: $consent,
+                callbackUrl: 'https://example.com/callback',
+            )],
+            'aml monitoring' => ['aml', fn (Client $c) => $c->aml->monitoring(
+                countries: ['NG'],
+                userDetails: $details,
+                consent: $consent,
+                fullName: 'John Doe',
+                callbackUrl: 'https://example.com/callback',
+            )],
+            'aml monitoring news' => ['aml', fn (Client $c) => $c->aml->monitoringNews(
+                'job_1',
+                'ref_001',
+                'financial_crime',
+            )],
+        ];
+    }
+
+    /**
+     * @param \Closure(Client): mixed $call
+     */
+    #[DataProvider('amlOperations')]
+    public function testAmlTokenBindsItsProduct(string $product, \Closure $call): void
+    {
+        $mock = new MockClient([MockClient::tokenResponse(), new Response(202, [], '{"status":"accepted","message":"ok","job_id":"j","user_id":"u","created_at":"2026-03-10T12:00:00.000Z"}')]);
+
+        $call($mock->client);
+
+        self::assertSame(['product' => $product], $this->claims($mock->request(0)));
+    }
+
     public function testJobWithoutAUserBindsOnlyTheProduct(): void
     {
         $mock = new MockClient([MockClient::tokenResponse(), MockClient::acceptedResponse()]);

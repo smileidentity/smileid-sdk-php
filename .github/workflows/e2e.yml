@@ -13,7 +13,9 @@ concurrency:
   # to be part of the key too — otherwise a nightly run and a post-merge run
   # cancel each other out and a real regression could be masked.
   group: e2e-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel only superseded pull request runs. Runs on main queue instead, so
+  # quick merges do not cancel each other's checks.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

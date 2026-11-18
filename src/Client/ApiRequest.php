@@ -33,6 +33,7 @@ final class ApiRequest
         public readonly array $multipart = [],
         public readonly string $bodyKind = self::BODY_NONE,
         public readonly ?string $product = null,
+        public readonly ?string $idempotencyKey = null,
     ) {
     }
 }

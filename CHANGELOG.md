@@ -7,8 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `aml->oneTime` for `POST /v3/aml`, and `aml->oneTimeSync` for `POST /v3/aml/sync`,
+  which returns the screening result in the response and accepts an
+  `idempotencyKey`.
+- `aml->monitoring` for `POST /v3/aml/monitoring`, and `aml->monitoringNews` for
+  `GET /v3/aml/monitoring/{job_id}/news/{reference}`.
+
 ### Changed
 
+- The AML operations now mint their token with the `product` claim the spec
+  names: `one_time_aml` for One-Time AML and its sync variant, and `aml` for AML
+  Monitoring and its news lookup.
 - The token `product` claim for each operation now comes from the spec's
   `x-smile-token-product` extension, set on the operation's request, instead of
   a table of paths kept in the transport. Claims are unchanged (spec v3.1188.0).
