@@ -330,6 +330,190 @@ final class Operations
     }
 
     /**
+     * POST /v3/aml and POST /v3/aml/sync (One-Time AML). The sync variant may
+     * carry an idempotency key, which also makes the call safe to retry.
+     *
+     * @param list<string> $countries
+     * @param list<string>|null $aliases
+     * @param array<string, mixed> $userDetails
+     * @param array<string, mixed>|null $partnerParams
+     * @param array<int, mixed>|null $metadata
+     *
+     * @return array<string, mixed>
+     */
+    public static function oneTimeAml(
+        Transport $transport,
+        bool $sync,
+        array $countries,
+        string $fullName,
+        ?string $birthYear,
+        ?bool $strictMatch,
+        ?array $aliases,
+        ?bool $searchExistingUser,
+        ?string $userId,
+        array $userDetails,
+        Consent $consent,
+        ?string $callbackUrl,
+        ?array $partnerParams,
+        ?array $metadata,
+        ?string $idempotencyKey,
+    ): array {
+        $parts = self::amlParts(
+            $countries,
+            $fullName,
+            $birthYear,
+            $strictMatch,
+            $aliases,
+            $searchExistingUser,
+            $userId,
+            $userDetails,
+            $consent,
+            $callbackUrl,
+            $partnerParams,
+            $metadata,
+        );
+
+        return $transport->send(new ApiRequest(
+            method: 'POST',
+            path: $sync ? '/v3/aml/sync' : '/v3/aml',
+            authenticated: true,
+            idempotent: $sync && $idempotencyKey !== null,
+            multipart: $parts,
+            bodyKind: ApiRequest::BODY_MULTIPART,
+            idempotencyKey: $idempotencyKey,
+        ));
+    }
+
+    /**
+     * @param list<string> $countries
+     * @param list<string>|null $aliases
+     * @param array<string, mixed> $userDetails
+     * @param array<string, mixed>|null $partnerParams
+     * @param array<int, mixed>|null $metadata
+     *
+     * @return array<string, mixed>
+     */
+    public static function amlMonitoring(
+        Transport $transport,
+        array $countries,
+        ?string $fullName,
+        ?string $birthYear,
+        ?bool $strictMatch,
+        ?array $aliases,
+        ?bool $searchExistingUser,
+        ?string $userId,
+        array $userDetails,
+        Consent $consent,
+        ?string $callbackUrl,
+        ?array $partnerParams,
+        ?array $metadata,
+    ): array {
+        $parts = self::amlParts(
+            $countries,
+            $fullName,
+            $birthYear,
+            $strictMatch,
+            $aliases,
+            $searchExistingUser,
+            $userId,
+            $userDetails,
+            $consent,
+            $callbackUrl,
+            $partnerParams,
+            $metadata,
+        );
+
+        return $transport->send(new ApiRequest(
+            method: 'POST',
+            path: '/v3/aml/monitoring',
+            authenticated: true,
+            idempotent: false,
+            multipart: $parts,
+            bodyKind: ApiRequest::BODY_MULTIPART,
+        ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function amlMonitoringNews(
+        Transport $transport,
+        string $jobId,
+        string $reference,
+        string $newsCategory,
+        ?int $page,
+        ?int $limit,
+    ): array {
+        $query = ['news_category' => $newsCategory];
+        if ($page !== null) {
+            $query['page'] = $page;
+        }
+        if ($limit !== null) {
+            $query['limit'] = $limit;
+        }
+
+        return $transport->send(new ApiRequest(
+            method: 'GET',
+            path: '/v3/aml/monitoring/' . rawurlencode($jobId) . '/news/' . rawurlencode($reference),
+            authenticated: true,
+            idempotent: true,
+            query: $query,
+        ));
+    }
+
+    /**
+     * Shared multipart body of the One-Time AML and AML Monitoring requests.
+     * Array fields are JSON parts, as multipart has no array encoding.
+     *
+     * @param list<string> $countries
+     * @param list<string>|null $aliases
+     * @param array<string, mixed> $userDetails
+     * @param array<string, mixed>|null $partnerParams
+     * @param array<int, mixed>|null $metadata
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function amlParts(
+        array $countries,
+        ?string $fullName,
+        ?string $birthYear,
+        ?bool $strictMatch,
+        ?array $aliases,
+        ?bool $searchExistingUser,
+        ?string $userId,
+        array $userDetails,
+        Consent $consent,
+        ?string $callbackUrl,
+        ?array $partnerParams,
+        ?array $metadata,
+    ): array {
+        $parts = [Multipart::json('countries', $countries)];
+        $scalars = [
+            'full_name' => $fullName,
+            'birth_year' => $birthYear,
+            'strict_match' => $strictMatch,
+            'search_existing_user' => $searchExistingUser,
+            'user_id' => $userId,
+            'callback_url' => $callbackUrl,
+        ];
+        foreach ($scalars as $name => $value) {
+            if ($value !== null) {
+                $parts[] = Multipart::scalar($name, $value);
+            }
+        }
+        if ($aliases !== null) {
+            $parts[] = Multipart::json('aliases', $aliases);
+        }
+
+        return array_merge($parts, self::jsonParts([
+            'user_details' => $userDetails,
+            'consent' => $consent,
+            'partner_params' => $partnerParams,
+            'metadata' => $metadata,
+        ]));
+    }
+
+    /**
      * Build plain text parts for the scalar fields present in $args.
      *
      * @param EntryArgs $args

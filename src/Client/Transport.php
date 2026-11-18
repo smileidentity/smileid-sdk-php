@@ -36,6 +36,14 @@ final class Transport
         '/v3/registration' => 'smart_selfie_registration',
         '/v3/authentication' => 'smart_selfie_authentication',
         '/v3/compare' => 'smart_selfie_compare',
+        '/v3/aml' => 'one_time_aml',
+        '/v3/aml/sync' => 'one_time_aml',
+        '/v3/aml/monitoring' => 'aml',
+    ];
+
+    // The same, for paths that carry identifiers.
+    private const PRODUCT_BY_PATH_PATTERN = [
+        '#^/v3/aml/monitoring/[^/]+/news/[^/]+$#' => 'aml',
     ];
 
     /** @var \Closure(float): void */
@@ -140,6 +148,10 @@ final class Transport
             $headers['User-ID'] = $request->userIdHeader;
         }
 
+        if ($request->idempotencyKey !== null) {
+            $headers['SmileID-Idempotency-Key'] = $request->idempotencyKey;
+        }
+
         $body = null;
         if ($request->bodyKind === ApiRequest::BODY_MULTIPART) {
             $stream = new MultipartStream(self::rewindResources($request->multipart));
@@ -178,7 +190,7 @@ final class Transport
      */
     private function mintToken(ApiRequest $request): string
     {
-        $product = self::PRODUCT_BY_PATH[$request->path] ?? null;
+        $product = self::productFor($request->path);
         $userId = $product !== null ? self::jobUserId($request) : null;
         if ($this->useEnrolledImage && $userId === null) {
             throw new ValidationError('user_id is required when use_enrolled_image is true.');
@@ -247,6 +259,20 @@ final class Transport
 
             throw ErrorFactory::fromResponse($status, $raw, $response->getReasonPhrase(), self::lowercaseHeaders($response));
         }
+    }
+
+    private static function productFor(string $path): ?string
+    {
+        if (isset(self::PRODUCT_BY_PATH[$path])) {
+            return self::PRODUCT_BY_PATH[$path];
+        }
+        foreach (self::PRODUCT_BY_PATH_PATTERN as $pattern => $product) {
+            if (preg_match($pattern, $path) === 1) {
+                return $product;
+            }
+        }
+
+        return null;
     }
 
     /**
