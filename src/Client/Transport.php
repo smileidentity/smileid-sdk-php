@@ -25,27 +25,6 @@ final class Transport
 {
     private const RETRYABLE_STATUSES = [408, 429, 500, 502, 503, 504];
 
-    // Mirrors the API authorizer: a token bound to a product is accepted only on
-    // that product's endpoint. Paths absent here mint a token with no claims.
-    private const PRODUCT_BY_PATH = [
-        '/v3/enhanced_kyc' => 'enhanced_kyc',
-        '/v3/document_verification' => 'document_verification',
-        '/v3/enhanced_document_verification' => 'enhanced_document_verification',
-        '/v3/residency_document_verification' => 'residency_document_verification',
-        '/v3/biometric_kyc' => 'biometric_kyc',
-        '/v3/registration' => 'smart_selfie_registration',
-        '/v3/authentication' => 'smart_selfie_authentication',
-        '/v3/compare' => 'smart_selfie_compare',
-        '/v3/aml' => 'one_time_aml',
-        '/v3/aml/sync' => 'one_time_aml',
-        '/v3/aml/monitoring' => 'aml',
-    ];
-
-    // The same, for paths that carry identifiers.
-    private const PRODUCT_BY_PATH_PATTERN = [
-        '#^/v3/aml/monitoring/[^/]+/news/[^/]+$#' => 'aml',
-    ];
-
     /** @var \Closure(float): void */
     private readonly \Closure $sleeper;
 
@@ -190,7 +169,7 @@ final class Transport
      */
     private function mintToken(ApiRequest $request): string
     {
-        $product = self::productFor($request->path);
+        $product = $request->product;
         $userId = $product !== null ? self::jobUserId($request) : null;
         if ($this->useEnrolledImage && $userId === null) {
             throw new ValidationError('user_id is required when use_enrolled_image is true.');
@@ -259,20 +238,6 @@ final class Transport
 
             throw ErrorFactory::fromResponse($status, $raw, $response->getReasonPhrase(), self::lowercaseHeaders($response));
         }
-    }
-
-    private static function productFor(string $path): ?string
-    {
-        if (isset(self::PRODUCT_BY_PATH[$path])) {
-            return self::PRODUCT_BY_PATH[$path];
-        }
-        foreach (self::PRODUCT_BY_PATH_PATTERN as $pattern => $product) {
-            if (preg_match($pattern, $path) === 1) {
-                return $product;
-            }
-        }
-
-        return null;
     }
 
     /**

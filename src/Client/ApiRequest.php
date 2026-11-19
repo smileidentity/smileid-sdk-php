@@ -17,6 +17,8 @@ final class ApiRequest
     public const BODY_MULTIPART = 'multipart';
 
     /**
+     * @param ?string $product The spec's x-smile-token-product: the product claim the
+     *     token must carry. Null mints a token with no product claim.
      * @param array<string, scalar> $query
      * @param list<array<string, mixed>> $multipart Guzzle-style multipart entries
      */
@@ -30,6 +32,7 @@ final class ApiRequest
         public readonly array $query = [],
         public readonly array $multipart = [],
         public readonly string $bodyKind = self::BODY_NONE,
+        public readonly ?string $product = null,
         public readonly ?string $idempotencyKey = null,
     ) {
     }

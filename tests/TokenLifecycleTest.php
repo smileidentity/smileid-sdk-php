@@ -516,6 +516,7 @@ final class TokenLifecycleTest extends TestCase
             path: '/v3/biometric_kyc',
             authenticated: true,
             idempotent: false,
+            product: 'biometric_kyc',
         );
 
         try {
