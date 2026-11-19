@@ -11,6 +11,6 @@ final class VersionTest extends TestCase
 {
     public function testVersionConstant(): void
     {
-        $this->assertSame('13.0.0', Version::VERSION);
+        $this->assertSame('13.1.0', Version::VERSION);
     }
 }

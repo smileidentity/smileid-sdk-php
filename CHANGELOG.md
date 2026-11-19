@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [13.1.0] - 2026-11-19
+
 ### Added
 
 - `aml->oneTime` for `POST /v3/aml`, and `aml->oneTimeSync` for `POST /v3/aml/sync`,
@@ -91,7 +93,8 @@ First public release of the Smile ID PHP SDK.
   other host.
 - A typed error hierarchy, all extending `SmileIdentity\Errors\SmileIDError`.
 
-[Unreleased]: https://github.com/smileidentity/smileid-sdk-php/compare/v13.0.0...HEAD
+[Unreleased]: https://github.com/smileidentity/smileid-sdk-php/compare/v13.1.0...HEAD
+[13.1.0]: https://github.com/smileidentity/smileid-sdk-php/compare/v13.0.0...v13.1.0
 [13.0.0]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.1.0...v13.0.0
 [12.1.0]: https://github.com/smileidentity/smileid-sdk-php/compare/v12.0.0...v12.1.0
 [12.0.0]: https://github.com/smileidentity/smileid-sdk-php/releases/tag/v12.0.0
