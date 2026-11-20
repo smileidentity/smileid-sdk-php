@@ -117,6 +117,35 @@ $accepted->jobId;        // "job_..."
 $accepted->isAccepted;   // true
 ```
 
+### Basic KYC
+
+Check the identity details you submit against the ID authority's record. The result reports a match verdict for each field and never returns the record. It goes to your callback URL.
+
+```php
+$accepted = $smile->basicKyc->verify(
+    country: 'NG',
+    idType: 'NIN',
+    idNumber: '12345678901',
+    userDetails: $userDetails,
+    consent: $consent,
+);
+```
+
+`verifySync` takes the same arguments and returns the result in the response, so you need no callback endpoint. It is never retried automatically. If it raises a 408, 424 or 500 error, the job still exists: read its outcome with `verifications` instead of resubmitting, which would bill a second lookup.
+
+```php
+$result = $smile->basicKyc->verifySync(
+    country: 'NG',
+    idType: 'NIN',
+    idNumber: '12345678901',
+    userDetails: $userDetails,
+    consent: $consent,
+);
+
+$result->status;                      // "clear", "attention", "block" or "error"
+$result->matchResults['overall'];     // "exact_match"
+```
+
 ### Document verification
 
 Verify a selfie and liveness images against a photo ID document. `livenessImages` takes 6 to 8 images.

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `basicKyc->verify` for `POST /v3/basic_kyc`, and `basicKyc->verifySync` for
+  `POST /v3/basic_kyc/sync`, which returns a `BasicKycResult` in the response.
+  Both mint their token with the `basic_kyc` product claim (spec v3.1215.0).
 - `aml->oneTime` for `POST /v3/aml`, and `aml->oneTimeSync` for `POST /v3/aml/sync`,
   which returns the screening result in the response and accepts an
   `idempotencyKey`.
