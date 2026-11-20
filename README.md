@@ -131,7 +131,7 @@ $accepted = $smile->basicKyc->verify(
 );
 ```
 
-`verifySync` takes the same arguments and returns the result in the response, so you need no callback endpoint. It is never retried automatically. If it raises a 408, 424 or 500 error, the job still exists: read its outcome with `verifications` instead of resubmitting, which would bill a second lookup.
+`verifySync` takes the same arguments and returns the result in the response, so you need no callback endpoint. It is never retried automatically. If it raises a 408, 424 or 500 error, the job may still have run. Resubmitting runs and bills a second lookup, so don't resubmit automatically.
 
 ```php
 $result = $smile->basicKyc->verifySync(
@@ -143,7 +143,7 @@ $result = $smile->basicKyc->verifySync(
 );
 
 $result->status;                      // "clear", "attention", "block" or "error"
-$result->matchResults['overall'];     // "exact_match"
+$result->matchResults['overall'] ?? null; // "exact_match", or null when there are no match results
 ```
 
 ### Document verification

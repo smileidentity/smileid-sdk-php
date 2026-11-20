@@ -62,7 +62,7 @@ final class Operations
      *
      * @return array<string, mixed>
      */
-    public static function basicKyc(Transport $transport, array $args, ?string $userIdHeader, bool $sync): array
+    public static function basicKyc(Transport $transport, array $args, bool $sync): array
     {
         $parts = self::scalarParts($args, ['country', 'id_type', 'id_number', 'bank_code', 'operator', 'callback_url']);
         $parts = array_merge($parts, self::jsonParts($args));
@@ -73,7 +73,6 @@ final class Operations
             product: 'basic_kyc',
             authenticated: true,
             idempotent: false,
-            userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
         ));

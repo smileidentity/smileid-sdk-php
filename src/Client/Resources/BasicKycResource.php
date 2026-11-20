@@ -41,7 +41,6 @@ final class BasicKycResource
         ?string $operator = null,
         ?array $partnerParams = null,
         ?array $metadata = null,
-        ?string $userId = null,
     ): AcceptedResponse {
         return AcceptedResponse::fromArray($this->submit(
             false,
@@ -55,17 +54,16 @@ final class BasicKycResource
             $operator,
             $partnerParams,
             $metadata,
-            $userId,
         ));
     }
 
     /**
      * Like {@see verify()}, but returns the result in the response. The
-     * callback URL is optional and ignored; no callback is sent. A call that
-     * cannot finish raises a SmileIDError (408 or 424) or an APIError (500). The
-     * job is recorded, so read its outcome from `verifications` instead of
-     * resubmitting, which would bill a second lookup. The call is never retried
-     * automatically.
+     * client's default callback URL is not used: `callback_url` is sent only
+     * when you pass one. A call that cannot finish raises a SmileIDError (408 or
+     * 424) or an APIError (500). The job may still have run, and resubmitting
+     * runs and bills a second lookup, so don't resubmit automatically. The call
+     * is never retried automatically.
      *
      * @param array<string, mixed> $userDetails
      * @param array<string, mixed>|null $partnerParams
@@ -82,7 +80,6 @@ final class BasicKycResource
         ?string $operator = null,
         ?array $partnerParams = null,
         ?array $metadata = null,
-        ?string $userId = null,
     ): BasicKycResult {
         return BasicKycResult::fromArray($this->submit(
             true,
@@ -96,7 +93,6 @@ final class BasicKycResource
             $operator,
             $partnerParams,
             $metadata,
-            $userId,
         ));
     }
 
@@ -119,7 +115,6 @@ final class BasicKycResource
         ?string $operator,
         ?array $partnerParams,
         ?array $metadata,
-        ?string $userId,
     ): array {
         UserDetails::validate($userDetails);
         Url::requireHttpsCallback($callbackUrl);
@@ -135,6 +130,6 @@ final class BasicKycResource
             'consent' => $consent,
             'partner_params' => $partnerParams,
             'metadata' => $metadata,
-        ], $userId, $sync);
+        ], $sync);
     }
 }

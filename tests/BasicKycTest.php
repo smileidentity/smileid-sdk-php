@@ -44,6 +44,28 @@ final class BasicKycTest extends TestCase
         return $claims;
     }
 
+    /**
+     * The user_details and consent parts carry application/json and verbatim
+     * snake_case keys.
+     *
+     * @param list<array{name: ?string, filename: ?string, contentType: ?string, body: string}> $parts
+     */
+    private function assertJsonParts(array $parts): void
+    {
+        $userDetails = MultipartParser::named($parts, 'user_details');
+        self::assertCount(1, $userDetails);
+        self::assertSame('application/json', $userDetails[0]['contentType']);
+        self::assertSame('{"given_names":"John","last_name":"Doe","email":"john@example.com"}', $userDetails[0]['body']);
+
+        $consent = MultipartParser::named($parts, 'consent');
+        self::assertCount(1, $consent);
+        self::assertSame('application/json', $consent[0]['contentType']);
+        self::assertSame(
+            '{"granted":true,"granted_at":"2026-03-06T12:00:00.000Z","notice_language":"EN","notice_privacy_policy_url":"https://example.com/privacy"}',
+            $consent[0]['body'],
+        );
+    }
+
     public function testVerifyGoldenRequest(): void
     {
         $mock = new MockClient([MockClient::tokenResponse(), MockClient::acceptedResponse('accepted')]);
@@ -59,7 +81,6 @@ final class BasicKycTest extends TestCase
             operator: 'mtn',
             partnerParams: ['order_id' => 'ORD-12345'],
             metadata: [['name' => 'a', 'value' => 'b']],
-            userId: 'user-1234',
         );
 
         self::assertTrue($accepted->isAccepted);
@@ -70,7 +91,7 @@ final class BasicKycTest extends TestCase
         self::assertNotSame('', $request->getHeaderLine('SmileID-Token'));
         self::assertSame('php', $request->getHeaderLine('SmileID-Source-SDK'));
         self::assertSame(Version::VERSION, $request->getHeaderLine('SmileID-Source-SDK-Version'));
-        self::assertSame('user-1234', $request->getHeaderLine('User-ID'));
+        self::assertFalse($request->hasHeader('User-ID'));
         self::assertFalse($request->hasHeader('SmileID-Partner-ID'));
         self::assertFalse($request->hasHeader('SmileID-Idempotency-Key'));
         self::assertStringStartsWith('multipart/form-data; boundary=', $request->getHeaderLine('Content-Type'));
@@ -79,12 +100,12 @@ final class BasicKycTest extends TestCase
         foreach (['country' => 'NG', 'id_type' => 'NIN', 'id_number' => '12345678901', 'bank_code' => '044', 'operator' => 'mtn', 'callback_url' => 'https://example.com/callback'] as $name => $value) {
             self::assertSame($value, MultipartParser::named($parts, $name)[0]['body'], $name);
         }
-        self::assertSame('{"given_names":"John","last_name":"Doe","email":"john@example.com"}', MultipartParser::named($parts, 'user_details')[0]['body']);
+        $this->assertJsonParts($parts);
         self::assertSame('{"order_id":"ORD-12345"}', MultipartParser::named($parts, 'partner_params')[0]['body']);
         self::assertSame('[{"name":"a","value":"b"}]', MultipartParser::named($parts, 'metadata')[0]['body']);
-        self::assertCount(1, MultipartParser::named($parts, 'consent'));
+        self::assertCount(0, MultipartParser::named($parts, 'user_id'));
 
-        self::assertEqualsCanonicalizing(['product' => 'basic_kyc', 'user_id' => 'user-1234'], $this->claims($mock->request(0)));
+        self::assertSame(['product' => 'basic_kyc'], $this->claims($mock->request(0)));
     }
 
     public function testVerifyUsesDefaultCallbackUrl(): void
@@ -127,7 +148,10 @@ final class BasicKycTest extends TestCase
             'device_signals' => ['ip' => '1.2.3.4'],
             'kyc_receipt' => 'https://portal.usesmileid.com/receipt',
         ];
-        $mock = new MockClient([MockClient::tokenResponse(), new Response(200, ['SmileID-Job-ID' => 'job_1'], (string) json_encode($body))]);
+        $mock = new MockClient(
+            [MockClient::tokenResponse(), new Response(200, ['SmileID-Job-ID' => 'job_1'], (string) json_encode($body))],
+            ['defaultCallbackUrl' => 'https://app.example.com/cb'],
+        );
 
         $result = $mock->client->basicKyc->verifySync(
             country: 'NG',
@@ -142,7 +166,13 @@ final class BasicKycTest extends TestCase
         self::assertFalse($request->hasHeader('SmileID-Partner-ID'));
         self::assertFalse($request->hasHeader('User-ID'));
         $parts = MultipartParser::parse($request);
+        foreach (['country' => 'NG', 'id_type' => 'NIN', 'id_number' => '12345678901'] as $name => $value) {
+            self::assertSame($value, MultipartParser::named($parts, $name)[0]['body'], $name);
+        }
+        $this->assertJsonParts($parts);
+        // The client's default callback URL is never sent on the sync call.
         self::assertCount(0, MultipartParser::named($parts, 'callback_url'));
+        self::assertCount(0, MultipartParser::named($parts, 'user_id'));
         self::assertSame(['product' => 'basic_kyc'], $this->claims($mock->request(0)));
 
         self::assertSame('attention', $result->status);
@@ -158,6 +188,19 @@ final class BasicKycTest extends TestCase
         self::assertSame(['score' => 1], $result->antifraud);
         self::assertSame(['ip' => '1.2.3.4'], $result->deviceSignals);
         self::assertSame('https://portal.usesmileid.com/receipt', $result->kycReceipt);
+    }
+
+    public function testVerifySyncSendsCallbackUrlOnlyWhenPassed(): void
+    {
+        $mock = new MockClient(
+            [MockClient::tokenResponse(), new Response(200, [], '{"status":"clear","product":"basic_kyc"}')],
+            ['defaultCallbackUrl' => 'https://app.example.com/cb'],
+        );
+
+        $mock->client->basicKyc->verifySync('NG', 'NIN', '12345678901', $this->userDetails(), $this->consent(), callbackUrl: 'https://example.com/sync-cb');
+
+        $parts = MultipartParser::parse($mock->request(1));
+        self::assertSame(['https://example.com/sync-cb'], array_column(MultipartParser::named($parts, 'callback_url'), 'body'));
     }
 
     public function testVerifySyncParsesErroredResultWithNulls(): void
@@ -215,12 +258,16 @@ final class BasicKycTest extends TestCase
         $mock = new MockClient([]);
 
         foreach ([
-            fn () => $mock->client->basicKyc->verify('NG', 'NIN', '1', ['given_names' => 'John'], $this->consent()),
-            fn () => $mock->client->basicKyc->verifySync('NG', 'NIN', '1', $this->userDetails(), $this->consent(), callbackUrl: 'http://example.com/cb'),
-        ] as $call) {
+            'missing last name' => fn () => $mock->client->basicKyc->verify('NG', 'NIN', '1', ['given_names' => 'John'], $this->consent()),
+            'missing given name' => fn () => $mock->client->basicKyc->verify('NG', 'NIN', '1', ['last_name' => 'Doe', 'email' => 'john@example.com'], $this->consent()),
+            'missing email and phone' => fn () => $mock->client->basicKyc->verify('NG', 'NIN', '1', ['given_names' => 'John', 'last_name' => 'Doe'], $this->consent()),
+            'http callback on verify' => fn () => $mock->client->basicKyc->verify('NG', 'NIN', '1', $this->userDetails(), $this->consent(), callbackUrl: 'http://example.com/cb'),
+            'http callback on verifySync' => fn () => $mock->client->basicKyc->verifySync('NG', 'NIN', '1', $this->userDetails(), $this->consent(), callbackUrl: 'http://example.com/cb'),
+            'missing given name on verifySync' => fn () => $mock->client->basicKyc->verifySync('NG', 'NIN', '1', ['given_names' => ' ', 'last_name' => 'Doe', 'phone_number' => '+2348000000000'], $this->consent()),
+        ] as $label => $call) {
             try {
                 $call();
-                self::fail('Expected a ValidationError.');
+                self::fail('Expected a ValidationError: ' . $label);
             } catch (ValidationError) {
                 self::addToAssertionCount(1);
             }
