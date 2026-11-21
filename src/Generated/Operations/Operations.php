@@ -55,6 +55,30 @@ final class Operations
     }
 
     /**
+     * POST /v3/basic_kyc and POST /v3/basic_kyc/sync (Basic KYC). The sync
+     * variant returns the result in the response and is never retried.
+     *
+     * @param EntryArgs $args
+     *
+     * @return array<string, mixed>
+     */
+    public static function basicKyc(Transport $transport, array $args, bool $sync): array
+    {
+        $parts = self::scalarParts($args, ['country', 'id_type', 'id_number', 'bank_code', 'operator', 'callback_url']);
+        $parts = array_merge($parts, self::jsonParts($args));
+
+        return $transport->send(new ApiRequest(
+            method: 'POST',
+            path: $sync ? '/v3/basic_kyc/sync' : '/v3/basic_kyc',
+            product: 'basic_kyc',
+            authenticated: true,
+            idempotent: false,
+            multipart: $parts,
+            bodyKind: ApiRequest::BODY_MULTIPART,
+        ));
+    }
+
+    /**
      * @param EntryArgs $args
      *
      * @return array<string, mixed>

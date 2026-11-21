@@ -8,6 +8,7 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\ClientInterface;
 use SmileIdentity\Client\Config;
 use SmileIdentity\Client\Resources\AmlResource;
+use SmileIdentity\Client\Resources\BasicKycResource;
 use SmileIdentity\Client\Resources\BiometricKycResource;
 use SmileIdentity\Client\Resources\BiometricResource;
 use SmileIdentity\Client\Resources\DocumentsResource;
@@ -29,6 +30,7 @@ final class Client
     private readonly Transport $transport;
 
     public readonly EnhancedKycResource $enhancedKyc;
+    public readonly BasicKycResource $basicKyc;
     public readonly DocumentsResource $documents;
     public readonly BiometricKycResource $biometricKyc;
     public readonly BiometricResource $biometric;
@@ -70,6 +72,7 @@ final class Client
         );
 
         $this->enhancedKyc = new EnhancedKycResource($this->transport, $this->config);
+        $this->basicKyc = new BasicKycResource($this->transport, $this->config);
         $this->documents = new DocumentsResource($this->transport, $this->config);
         $this->biometricKyc = new BiometricKycResource($this->transport, $this->config);
         $this->biometric = new BiometricResource($this->transport, $this->config);

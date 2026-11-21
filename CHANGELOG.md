@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `basicKyc->verify` for `POST /v3/basic_kyc`, and `basicKyc->verifySync` for
+  `POST /v3/basic_kyc/sync`, which returns a `BasicKycResult` in the response.
+  Both mint their token with the `basic_kyc` product claim (spec v3.1215.0).
+
 ## [13.1.0] - 2026-11-19
 
 ### Added
