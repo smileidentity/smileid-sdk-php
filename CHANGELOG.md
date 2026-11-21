@@ -25,9 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the callback payload, with typed `status`, `message`, `reason`, `jobId`,
   `userId` and `kycReceipt`, and the whole body in `data`. `jobId` comes from
   the `SmileID-Job-ID` header, or the body's `job_id` when the header is
-  absent. It is never retried. After a 408 or 424, or a 500 that has a job
+  absent, and `userId` from the `User-ID` header, or the body's `user_id`.
+  `responseSignature` and `responseTimestamp` carry the `Response-Signature`
+  and `Response-Timestamp` headers for your own webhook signature check. It is never retried. After a 408 or 424, or a 500 that has a job
   ID, read the outcome with `verifications->retrieve($e->jobId)` instead of
-  resubmitting. Also adds `Operations::enhancedKycSync`.
+  resubmitting. Also adds `Operations::enhancedKycSync` and
+  `Helpers\ResponseHeader::get`.
 - `Transport::sendWithHeaders`, `Operations::basicKycSync`,
   `Operations::oneTimeAmlSync` and `Helpers\JobId::fromHeaders`, which return
   or read the response headers.
