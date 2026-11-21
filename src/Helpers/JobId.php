@@ -16,8 +16,6 @@ final class JobId
      */
     public static function fromHeaders(array $headers): ?string
     {
-        $jobId = trim(array_change_key_case($headers, CASE_LOWER)['smileid-job-id'] ?? '');
-
-        return $jobId !== '' ? $jobId : null;
+        return ResponseHeader::get($headers, 'SmileID-Job-ID');
     }
 }
