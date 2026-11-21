@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SmileIdentity\Errors;
 
+use SmileIdentity\Helpers\JobId;
+
 /**
  * Turns an HTTP error response into a typed {@see SmileIDError}.
  *
@@ -14,7 +16,8 @@ namespace SmileIdentity\Errors;
 final class ErrorFactory
 {
     /**
-     * @param array<string, string> $headers response headers, lowercased keys
+     * @param array<string, string> $headers response headers; names are matched
+     *     case-insensitively
      */
     public static function fromResponse(
         int $statusCode,
@@ -53,6 +56,7 @@ final class ErrorFactory
             $message = $reasonPhrase !== '' ? $reasonPhrase : 'HTTP ' . $statusCode;
         }
 
+        $headers = array_change_key_case($headers, CASE_LOWER);
         $requestId = $headers['x-request-id'] ?? $headers['request-id'] ?? null;
 
         $class = self::classFor($statusCode);
@@ -64,6 +68,7 @@ final class ErrorFactory
             code: $code,
             requestId: $requestId,
             rawBody: $rawBody,
+            jobId: JobId::fromHeaders($headers),
         );
     }
 

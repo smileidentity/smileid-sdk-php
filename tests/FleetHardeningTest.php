@@ -103,7 +103,7 @@ final class FleetHardeningTest extends TestCase
     {
         $mock = new MockClient([
             MockClient::tokenResponse(),
-            new Response(202, ['X-Request-ID' => 'req-42'], '<html>gateway page</html>'),
+            new Response(202, ['X-Request-ID' => 'req-42', 'SmileID-Job-ID' => 'job_42'], '<html>gateway page</html>'),
         ]);
 
         try {
@@ -113,6 +113,7 @@ final class FleetHardeningTest extends TestCase
             self::assertSame(202, $e->statusCode);
             self::assertSame('<html>gateway page</html>', $e->rawBody);
             self::assertSame('req-42', $e->requestId);
+            self::assertSame('job_42', $e->jobId);
         }
     }
 

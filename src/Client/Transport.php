@@ -13,6 +13,7 @@ use SmileIdentity\Errors\ConnectionError;
 use SmileIdentity\Errors\ErrorFactory;
 use SmileIdentity\Errors\UnexpectedResponseError;
 use SmileIdentity\Errors\ValidationError;
+use SmileIdentity\Helpers\JobId;
 use SmileIdentity\Helpers\Multipart;
 use SmileIdentity\Version;
 
@@ -64,6 +65,20 @@ final class Transport
      */
     public function send(ApiRequest $request, array $nonErrorStatuses = []): array
     {
+        return $this->sendWithHeaders($request, $nonErrorStatuses)[0];
+    }
+
+    /**
+     * Like {@see send()}, but also returns the response headers, with
+     * lowercased names, so a caller can read headers such as SmileID-Job-ID.
+     *
+     * @param list<int> $nonErrorStatuses HTTP statuses to return instead of raising
+     *
+     * @return array{0: array<string, mixed>, 1: array<string, string>} the decoded
+     *     body and the response headers
+     */
+    public function sendWithHeaders(ApiRequest $request, array $nonErrorStatuses = []): array
+    {
         $token = $request->authenticated ? $this->mintToken($request) : null;
         $attempt = 0;
 
@@ -87,7 +102,7 @@ final class Transport
             $raw = (string) $response->getBody();
 
             if (($status >= 200 && $status < 300) || in_array($status, $nonErrorStatuses, true)) {
-                return self::decodeSuccess($status, $raw, $response);
+                return [self::decodeSuccess($status, $raw, $response), self::lowercaseHeaders($response)];
             }
 
             if ($request->idempotent
@@ -352,6 +367,7 @@ final class Transport
                 statusCode: $status,
                 requestId: $headers['x-request-id'] ?? $headers['request-id'] ?? null,
                 rawBody: $raw,
+                jobId: JobId::fromHeaders($headers),
             );
         }
 

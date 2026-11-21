@@ -131,7 +131,7 @@ $accepted = $smile->basicKyc->verify(
 );
 ```
 
-`verifySync` takes the same arguments and returns the result in the response, so you need no callback endpoint. It is never retried automatically. If it raises a 408, 424 or 500 error, the job may still have run. Resubmitting runs and bills a second lookup, so don't resubmit automatically.
+`verifySync` takes the same arguments and returns the result in the response, so you need no callback endpoint. It is never retried automatically. If it raises a 408 or 424 error, the job may still have run. Resubmitting runs and bills a second lookup, so don't resubmit automatically. Read the outcome with `verifications->retrieve()`, using the job ID from the error. Do the same for a 500 error that has a job ID. A 500 error with no job ID means the job was not created.
 
 ```php
 $result = $smile->basicKyc->verifySync(
@@ -144,6 +144,20 @@ $result = $smile->basicKyc->verifySync(
 
 $result->status;                      // "clear", "attention", "block" or "error"
 $result->matchResults['overall'] ?? null; // "exact_match", or null when there are no match results
+$result->jobId;                       // "job_..."
+```
+
+```php
+use SmileIdentity\Errors\SmileIDError;
+
+try {
+    $result = $smile->basicKyc->verifySync(/* ... */);
+} catch (SmileIDError $e) {
+    if ($e->jobId === null) {
+        throw $e; // no job was created
+    }
+    $status = $smile->verifications->retrieve($e->jobId);
+}
 ```
 
 ### Document verification
@@ -366,6 +380,8 @@ $accepted = $smile->aml->oneTime(
 
 `oneTimeSync` takes the same arguments and returns the result in the response, so you need no callback endpoint. Pass an `idempotencyKey` (16 to 128 characters of `A-Z a-z 0-9 - _`) so a retry returns the original result. The SDK retries a timed-out call only when you pass a key.
 
+If it raises a 408 error, nothing was billed and the job has ended in error, so its status will only ever report that error. Resubmit rather than poll, with the same `idempotencyKey` so the resubmission is safe to repeat. If it raises a 500 error that has a job ID, read the outcome with `verifications->retrieve()`, using the job ID from the error.
+
 ```php
 $result = $smile->aml->oneTimeSync(
     countries: ['NG'],
@@ -377,6 +393,7 @@ $result = $smile->aml->oneTimeSync(
 
 $result->status;            // "clear", "attention", "block" or "error"
 $result->noOfPersonsFound;  // 0
+$result->jobId;             // "job_..."
 ```
 
 `monitoring` screens a name and enrols it for ongoing monitoring. `monitoringNews` reads the adverse-media articles for one person in a monitoring job.
@@ -416,6 +433,7 @@ try {
     $e->status;         // status text from the body, when present
     $e->code;           // API error code, e.g. "2413" (services endpoints only)
     $e->rawBody;        // the unparsed response body
+    $e->jobId;          // the SmileID-Job-ID response header, null when absent
 }
 ```
 
@@ -437,7 +455,7 @@ try {
 
 ## Retries
 
-The SDK retries idempotent operations only: status and services reads, and the token fetch made before each request. It retries on connection errors, 408, 429 and 5xx, honours the `Retry-After` header, and never retries a 409. Verification submissions are never retried automatically — a connection failure surfaces as `ConnectionError` and you decide whether to resubmit.
+The SDK retries idempotent operations only: status and services reads, and the token fetch made before each request. It retries on connection errors, 408, 429 and 5xx, honours the `Retry-After` header, and never retries a 409. Verification submissions are never retried automatically, except `aml->oneTimeSync` when you pass an `idempotencyKey` — a connection failure surfaces as `ConnectionError` and you decide whether to resubmit.
 
 ## Telemetry
 

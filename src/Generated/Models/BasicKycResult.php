@@ -21,6 +21,7 @@ final class BasicKycResult
      * @param array<string, mixed> $consent
      * @param array<string, mixed>|null $antifraud
      * @param array<string, mixed>|null $deviceSignals
+     * @param string|null $jobId the Smile job id, from the SmileID-Job-ID response header
      */
     public function __construct(
         public readonly string $status,
@@ -36,13 +37,16 @@ final class BasicKycResult
         public readonly ?array $antifraud,
         public readonly ?array $deviceSignals,
         public readonly ?string $kycReceipt,
+        public readonly ?string $jobId = null,
     ) {
     }
 
     /**
      * @param array<string, mixed> $data
+     * @param string|null $jobId the SmileID-Job-ID response header; the body
+     *     carries no job id
      */
-    public static function fromArray(array $data): self
+    public static function fromArray(array $data, ?string $jobId = null): self
     {
         return new self(
             status: (string) ($data['status'] ?? ''),
@@ -58,6 +62,7 @@ final class BasicKycResult
             antifraud: is_array($data['antifraud'] ?? null) ? $data['antifraud'] : null,
             deviceSignals: is_array($data['device_signals'] ?? null) ? $data['device_signals'] : null,
             kycReceipt: isset($data['kyc_receipt']) ? (string) $data['kyc_receipt'] : null,
+            jobId: $jobId,
         );
     }
 }
