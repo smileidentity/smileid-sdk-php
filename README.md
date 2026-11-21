@@ -153,8 +153,8 @@ use SmileIdentity\Errors\SmileIDError;
 try {
     $result = $smile->basicKyc->verifySync(/* ... */);
 } catch (SmileIDError $e) {
-    if ($e->jobId === null) {
-        throw $e; // no job was created
+    if (!in_array($e->statusCode, [408, 424, 500], true) || $e->jobId === null) {
+        throw $e;
     }
     $status = $smile->verifications->retrieve($e->jobId);
 }

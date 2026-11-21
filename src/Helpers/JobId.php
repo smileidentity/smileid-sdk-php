@@ -8,15 +8,16 @@ namespace SmileIdentity\Helpers;
 final class JobId
 {
     /**
-     * The job id from the SmileID-Job-ID header, or null when the header is
-     * absent or empty. Header names are matched case-insensitively.
+     * The trimmed job id from the SmileID-Job-ID header, or null when the
+     * header is absent, empty or only whitespace. Header names are matched
+     * case-insensitively.
      *
      * @param array<string, string> $headers response headers
      */
     public static function fromHeaders(array $headers): ?string
     {
-        $jobId = array_change_key_case($headers, CASE_LOWER)['smileid-job-id'] ?? null;
+        $jobId = trim(array_change_key_case($headers, CASE_LOWER)['smileid-job-id'] ?? '');
 
-        return $jobId !== null && $jobId !== '' ? $jobId : null;
+        return $jobId !== '' ? $jobId : null;
     }
 }

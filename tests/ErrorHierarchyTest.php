@@ -16,6 +16,7 @@ use SmileIdentity\Errors\PaymentRequiredError;
 use SmileIdentity\Errors\PermissionError;
 use SmileIdentity\Errors\RateLimitError;
 use SmileIdentity\Errors\SmileIDError;
+use SmileIdentity\Helpers\JobId;
 use SmileIdentity\Tests\Support\MockClient;
 
 /**
@@ -217,6 +218,24 @@ final class ErrorHierarchyTest extends TestCase
         self::assertNull(ErrorFactory::fromResponse(408, '{}')->jobId);
         self::assertNull(ErrorFactory::fromResponse(408, '{}', headers: ['smileid-job-id' => ''])->jobId);
         self::assertNull((new SmileIDError('local'))->jobId);
+    }
+
+    public function testJobIdIsTrimmedAndWhitespaceOnlyIsAbsent(): void
+    {
+        self::assertNull(JobId::fromHeaders(['SmileID-Job-ID' => "  \t "]));
+        self::assertNull(ErrorFactory::fromResponse(408, '{}', headers: ['smileid-job-id' => '   '])->jobId);
+        self::assertSame('job_1', JobId::fromHeaders(['SmileID-Job-ID' => ' job_1 ']));
+
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new Response(408, ['SmileID-Job-ID' => '   '], '{"status":"Request Timeout","message":"slow"}'),
+        ]);
+        try {
+            $mock->client->basicKyc->verifySync(...$this->entryArgs());
+            self::fail('Expected SmileIDError');
+        } catch (SmileIDError $e) {
+            self::assertNull($e->jobId);
+        }
     }
 
     public function testJobIdHeaderLookupIsCaseInsensitive(): void
