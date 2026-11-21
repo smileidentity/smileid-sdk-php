@@ -10,6 +10,7 @@ use SmileIdentity\Consent;
 use SmileIdentity\Errors\APIError;
 use SmileIdentity\Errors\SmileIDError;
 use SmileIdentity\Errors\ValidationError;
+use SmileIdentity\Generated\Models\EnhancedKycResult;
 use SmileIdentity\Tests\Support\MockClient;
 use SmileIdentity\Tests\Support\MultipartParser;
 
@@ -39,12 +40,13 @@ final class EnhancedKycSyncTest extends TestCase
     {
         $body = [
             'job_id' => 'job_body_ignored',
-            'user_id' => 'user_01h8x9y2z3a4b5c6d7e8f9g0h1',
+            'user_id' => 'user_body_ignored',
             'status' => 'clear',
             'reason' => null,
             'message' => 'Verification successful',
             'kyc_receipt' => 'https://portal.usesmileid.com/api/v3/001/job_result_summary/job_01h8x9y2z3a4b5c6d7e8f9g0h1/generate_v3_pdf/live?token=REDACTED',
             'partner_params' => ['order_id' => 'ORD-12345'],
+            'id_info' => ['full_name' => 'Amina Fatou Clearwater', 'dob' => '1990-01-01'],
         ];
         $mock = new MockClient([
             MockClient::tokenResponse(),
@@ -66,12 +68,16 @@ final class EnhancedKycSyncTest extends TestCase
         self::assertSame($body['kyc_receipt'], $result->kycReceipt);
         self::assertSame($body, $result->data);
         self::assertSame(['order_id' => 'ORD-12345'], $result->data['partner_params']);
+        // Untyped fields, such as the ID authority's data, are kept.
+        self::assertSame(['full_name' => 'Amina Fatou Clearwater', 'dob' => '1990-01-01'], $result->data['id_info']);
+        self::assertSame('c2lnbmF0dXJl', $result->responseSignature);
+        self::assertSame('2026-03-10T12:00:04.000Z', $result->responseTimestamp);
     }
 
     /** The Ghostwell persona: a blocked result, with the job id only in the body. */
     public function testVerifySyncFallsBackToTheBodyJobId(): void
     {
-        $body = ['job_id' => 'job_from_body', 'status' => 'block', 'reason' => 'identifier_not_found', 'message' => 'Verification failed: Unable to validate ID - Not Found'];
+        $body = ['job_id' => 'job_from_body', 'user_id' => 'user_from_body', 'status' => 'block', 'reason' => 'identifier_not_found', 'message' => 'Verification failed: Unable to validate ID - Not Found'];
         $mock = new MockClient([MockClient::tokenResponse(), new Response(200, [], (string) json_encode($body))]);
 
         $result = $mock->client->enhancedKyc->verifySync('NG', 'NIN', '12345678901', $this->userDetails(), $this->consent());
@@ -80,8 +86,33 @@ final class EnhancedKycSyncTest extends TestCase
         self::assertSame('identifier_not_found', $result->reason);
         self::assertSame('Verification failed: Unable to validate ID - Not Found', $result->message);
         self::assertSame('job_from_body', $result->jobId);
-        self::assertNull($result->userId);
+        self::assertSame('user_from_body', $result->userId);
         self::assertNull($result->kycReceipt);
+        self::assertNull($result->responseSignature);
+        self::assertNull($result->responseTimestamp);
+    }
+
+    /** Header names match case-insensitively; a blank header falls back to the body. */
+    public function testFromArrayReadsLowerCaseHeadersAndTreatsBlankAsAbsent(): void
+    {
+        $body = ['job_id' => 'job_body', 'user_id' => 'user_body', 'status' => 'clear'];
+
+        $result = EnhancedKycResult::fromArray($body, [
+            'smileid-job-id' => ' job_header ',
+            'user-id' => 'user_header',
+            'response-signature' => 'sig',
+            'response-timestamp' => '2026-03-10T12:00:04.000Z',
+        ]);
+        self::assertSame('job_header', $result->jobId);
+        self::assertSame('user_header', $result->userId);
+        self::assertSame('sig', $result->responseSignature);
+        self::assertSame('2026-03-10T12:00:04.000Z', $result->responseTimestamp);
+
+        $blank = EnhancedKycResult::fromArray($body, ['smileid-job-id' => ' ', 'user-id' => '', 'response-signature' => '  ']);
+        self::assertSame('job_body', $blank->jobId);
+        self::assertSame('user_body', $blank->userId);
+        self::assertNull($blank->responseSignature);
+        self::assertNull($blank->responseTimestamp);
     }
 
     public function testVerifySyncParsesAnEmptyBody(): void
@@ -94,6 +125,7 @@ final class EnhancedKycSyncTest extends TestCase
         self::assertSame('', $result->message);
         self::assertNull($result->reason);
         self::assertNull($result->jobId);
+        self::assertNull($result->userId);
         self::assertSame([], $result->data);
     }
 

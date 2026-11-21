@@ -130,9 +130,14 @@ $result = $smile->enhancedKyc->verifySync(
 
 $result->status;   // "clear", "attention", "block" or "error"
 $result->reason;   // e.g. "identifier_not_found", or null
-$result->jobId;    // "job_..."
-$result->data;     // the whole response body, including fields not typed on the result
+$result->jobId;              // "job_...", from the SmileID-Job-ID header
+$result->userId;             // from the User-ID header
+$result->data;               // the whole response body, including fields not typed on the result
+$result->responseSignature;  // the Response-Signature header
+$result->responseTimestamp;  // the Response-Timestamp header
 ```
+
+The response carries the same `Response-Signature` and `Response-Timestamp` headers as the callback. The result exposes them so you can check them with your own webhook signature code. The SDK does not check them.
 
 ```php
 use SmileIdentity\Errors\SmileIDError;

@@ -10,7 +10,6 @@ use SmileIdentity\Consent;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Models\EnhancedKycResult;
 use SmileIdentity\Generated\Operations\Operations;
-use SmileIdentity\Helpers\JobId;
 use SmileIdentity\Helpers\Url;
 use SmileIdentity\Helpers\UserDetails;
 
@@ -99,7 +98,7 @@ final class EnhancedKycResource
             $userId,
         );
 
-        return EnhancedKycResult::fromArray($data, JobId::fromHeaders($headers));
+        return EnhancedKycResult::fromArray($data, $headers);
     }
 
     /**
