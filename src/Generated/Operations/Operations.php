@@ -39,19 +39,40 @@ final class Operations
      */
     public static function enhancedKyc(Transport $transport, array $args, ?string $userIdHeader): array
     {
+        return $transport->send(self::enhancedKycRequest($args, $userIdHeader, false));
+    }
+
+    /**
+     * POST /v3/enhanced_kyc/sync, returning the result and the response
+     * headers (which carry SmileID-Job-ID). Never retried.
+     *
+     * @param EntryArgs $args
+     *
+     * @return array{0: array<string, mixed>, 1: array<string, string>}
+     */
+    public static function enhancedKycSync(Transport $transport, array $args, ?string $userIdHeader): array
+    {
+        return $transport->sendWithHeaders(self::enhancedKycRequest($args, $userIdHeader, true));
+    }
+
+    /**
+     * @param EntryArgs $args
+     */
+    private static function enhancedKycRequest(array $args, ?string $userIdHeader, bool $sync): ApiRequest
+    {
         $parts = self::scalarParts($args, ['country', 'id_type', 'id_number', 'bank_code', 'operator', 'callback_url']);
         $parts = array_merge($parts, self::jsonParts($args));
 
-        return $transport->send(new ApiRequest(
+        return new ApiRequest(
             method: 'POST',
-            path: '/v3/enhanced_kyc',
+            path: $sync ? '/v3/enhanced_kyc/sync' : '/v3/enhanced_kyc',
             product: 'enhanced_kyc',
             authenticated: true,
             idempotent: false,
             userIdHeader: $userIdHeader,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
-        ));
+        );
     }
 
     /**

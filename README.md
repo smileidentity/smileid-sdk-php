@@ -117,6 +117,36 @@ $accepted->jobId;        // "job_..."
 $accepted->isAccepted;   // true
 ```
 
+`verifySync` takes the same arguments and returns the result in the response, so you need no callback endpoint. The body is the payload the callback would have carried. It is never retried automatically. If it raises a 408 or 424 error, the job may still have run. Resubmitting runs and bills a second lookup, so don't resubmit automatically. Read the outcome with `verifications->retrieve()`, using the job ID from the error. Do the same for a 500 error that has a job ID. A 500 error with no job ID means the job was not created.
+
+```php
+$result = $smile->enhancedKyc->verifySync(
+    country: 'NG',
+    idType: 'NIN',
+    idNumber: '12345678901',
+    userDetails: $userDetails,
+    consent: $consent,
+);
+
+$result->status;   // "clear", "attention", "block" or "error"
+$result->reason;   // e.g. "identifier_not_found", or null
+$result->jobId;    // "job_..."
+$result->data;     // the whole response body, including fields not typed on the result
+```
+
+```php
+use SmileIdentity\Errors\SmileIDError;
+
+try {
+    $result = $smile->enhancedKyc->verifySync(/* ... */);
+} catch (SmileIDError $e) {
+    if (!in_array($e->statusCode, [408, 424, 500], true) || $e->jobId === null) {
+        throw $e;
+    }
+    $status = $smile->verifications->retrieve($e->jobId);
+}
+```
+
 ### Basic KYC
 
 Check the identity details you submit against the ID authority's record. The result reports a match verdict for each field and never returns the record. It goes to your callback URL.
