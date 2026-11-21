@@ -12,6 +12,7 @@ use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Models\AmlMonitoringNewsResponse;
 use SmileIdentity\Generated\Models\OneTimeAmlResult;
 use SmileIdentity\Generated\Operations\Operations;
+use SmileIdentity\Helpers\JobId;
 use SmileIdentity\Helpers\Url;
 use SmileIdentity\Helpers\UserDetails;
 
@@ -96,10 +97,13 @@ final class AmlResource
     }
 
     /**
-     * Like {@see oneTime()}, but returns the terminal result in the response.
-     * The callback URL is optional; no callback is sent. Pass an idempotency
-     * key (16 to 128 characters of A-Z a-z 0-9 - _) to make a retry resolve to
-     * the same screening; the call is only retried automatically with a key.
+     * Like {@see oneTime()}, but returns the terminal result in the response,
+     * with the job id in `jobId`. The callback URL is optional; no callback is
+     * sent. Pass an idempotency key (16 to 128 characters of A-Z a-z 0-9 - _)
+     * to make a retry resolve to the same screening; the call is only retried
+     * automatically with a key. A 408 means nothing was billed and the job
+     * ended in error, so resubmit rather than poll. After a 500 with a `jobId`,
+     * read the outcome with `verifications->retrieve($e->jobId)`.
      *
      * @param list<string> $countries ISO 3166-1 alpha-2 codes
      * @param array<string, mixed> $userDetails
@@ -128,9 +132,8 @@ final class AmlResource
             throw new ValidationError('idempotencyKey must be 16 to 128 characters of A-Z a-z 0-9 - _.');
         }
 
-        return OneTimeAmlResult::fromArray(Operations::oneTimeAml(
+        [$data, $headers] = Operations::oneTimeAmlSync(
             $this->transport,
-            true,
             $countries,
             $fullName,
             $birthYear,
@@ -144,7 +147,9 @@ final class AmlResource
             $partnerParams,
             $metadata,
             $idempotencyKey,
-        ));
+        );
+
+        return OneTimeAmlResult::fromArray($data, JobId::fromHeaders($headers));
     }
 
     /**
