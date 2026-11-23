@@ -7,6 +7,7 @@ namespace SmileIdentity\Tests;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use SmileIdentity\Consent;
+use SmileIdentity\Errors\APIError;
 use SmileIdentity\Errors\ErrorFactory;
 use SmileIdentity\Errors\InvalidRequestError;
 use SmileIdentity\Errors\NotFoundError;
@@ -15,6 +16,7 @@ use SmileIdentity\Errors\PaymentRequiredError;
 use SmileIdentity\Errors\PermissionError;
 use SmileIdentity\Errors\RateLimitError;
 use SmileIdentity\Errors\SmileIDError;
+use SmileIdentity\Helpers\JobId;
 use SmileIdentity\Tests\Support\MockClient;
 
 /**
@@ -181,6 +183,80 @@ final class ErrorHierarchyTest extends TestCase
         self::assertSame(\SmileIdentity\Errors\APIError::class, ErrorFactory::classFor(500));
         self::assertSame(\SmileIdentity\Errors\APIError::class, ErrorFactory::classFor(503));
         self::assertSame(SmileIDError::class, ErrorFactory::classFor(418));
+    }
+
+    public function testJobIdComesFromTheSmileIdJobIdHeader(): void
+    {
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new Response(408, ['SmileID-Job-ID' => 'job_408'], '{"status":"Request Timeout","message":"The ID authority did not respond in time."}'),
+        ]);
+
+        try {
+            $mock->client->basicKyc->verifySync(...$this->entryArgs());
+            self::fail('Expected SmileIDError');
+        } catch (SmileIDError $e) {
+            self::assertSame(408, $e->statusCode);
+            self::assertSame('job_408', $e->jobId);
+        }
+    }
+
+    public function testJobIdIsNullWithoutTheHeader(): void
+    {
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new Response(500, [], '{"message":"Internal server error"}'),
+        ]);
+
+        try {
+            $mock->client->basicKyc->verifySync(...$this->entryArgs());
+            self::fail('Expected APIError');
+        } catch (APIError $e) {
+            self::assertNull($e->jobId);
+        }
+
+        self::assertNull(ErrorFactory::fromResponse(408, '{}')->jobId);
+        self::assertNull(ErrorFactory::fromResponse(408, '{}', headers: ['smileid-job-id' => ''])->jobId);
+        self::assertNull((new SmileIDError('local'))->jobId);
+    }
+
+    public function testJobIdIsTrimmedAndWhitespaceOnlyIsAbsent(): void
+    {
+        self::assertNull(JobId::fromHeaders(['SmileID-Job-ID' => "  \t "]));
+        self::assertNull(ErrorFactory::fromResponse(408, '{}', headers: ['smileid-job-id' => '   '])->jobId);
+        self::assertSame('job_1', JobId::fromHeaders(['SmileID-Job-ID' => ' job_1 ']));
+
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new Response(408, ['SmileID-Job-ID' => '   '], '{"status":"Request Timeout","message":"slow"}'),
+        ]);
+        try {
+            $mock->client->basicKyc->verifySync(...$this->entryArgs());
+            self::fail('Expected SmileIDError');
+        } catch (SmileIDError $e) {
+            self::assertNull($e->jobId);
+        }
+    }
+
+    public function testJobIdHeaderLookupIsCaseInsensitive(): void
+    {
+        foreach (['smileid-job-id', 'SMILEID-JOB-ID', 'SmileID-Job-ID'] as $name) {
+            $mock = new MockClient([
+                MockClient::tokenResponse(),
+                new Response(424, [$name => 'job_424'], '{"status":"Failed Dependency","message":"The ID authority is unavailable."}'),
+            ]);
+            try {
+                $mock->client->basicKyc->verifySync(...$this->entryArgs());
+                self::fail('Expected SmileIDError');
+            } catch (SmileIDError $e) {
+                self::assertSame('job_424', $e->jobId, $name);
+            }
+
+            self::assertSame('job_424', ErrorFactory::fromResponse(424, '{}', headers: [$name => 'job_424'])->jobId, $name);
+        }
+
+        $error = ErrorFactory::fromResponse(500, '{}', headers: ['X-Request-ID' => 'req-1']);
+        self::assertSame('req-1', $error->requestId);
     }
 
     public function testEveryErrorExtendsSmileIDErrorAndException(): void

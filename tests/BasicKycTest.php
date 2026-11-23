@@ -188,6 +188,7 @@ final class BasicKycTest extends TestCase
         self::assertSame(['score' => 1], $result->antifraud);
         self::assertSame(['ip' => '1.2.3.4'], $result->deviceSignals);
         self::assertSame('https://portal.usesmileid.com/receipt', $result->kycReceipt);
+        self::assertSame('job_1', $result->jobId);
     }
 
     public function testVerifySyncSendsCallbackUrlOnlyWhenPassed(): void
@@ -220,6 +221,7 @@ final class BasicKycTest extends TestCase
         self::assertNull($result->antifraud);
         self::assertNull($result->deviceSignals);
         self::assertNull($result->kycReceipt);
+        self::assertNull($result->jobId);
     }
 
     public function testVerifySyncIsNeverRetried(): void
@@ -234,8 +236,42 @@ final class BasicKycTest extends TestCase
             self::fail('Expected an error.');
         } catch (SmileIDError $e) {
             self::assertSame(408, $e->statusCode);
+            self::assertSame('job_1', $e->jobId);
         }
         self::assertCount(2, $mock->history);
+    }
+
+    /** The README's advice: after a 408, read the outcome by job ID instead of resubmitting. */
+    public function testVerifySyncTimeoutIsResolvedThroughTheStatusEndpoint(): void
+    {
+        $mock = new MockClient([
+            MockClient::tokenResponse(),
+            new Response(408, ['SmileID-Job-ID' => 'job_01h8x9y2z3'], '{"status":"Request Timeout","message":"The ID authority did not respond in time."}'),
+            MockClient::tokenResponse(),
+            new Response(200, [], (string) json_encode([
+                'status' => 'clear',
+                'job_id' => 'job_01h8x9y2z3',
+                'user_id' => 'user_1',
+                'message' => 'Job completed',
+            ])),
+        ]);
+
+        try {
+            $mock->client->basicKyc->verifySync('NG', 'NIN', '12345678901', $this->userDetails(), $this->consent());
+            self::fail('Expected an error.');
+        } catch (SmileIDError $e) {
+            self::assertNotNull($e->jobId);
+            $status = $mock->client->verifications->retrieve($e->jobId);
+        }
+
+        self::assertCount(4, $mock->history);
+        self::assertSame('https://testapi.smileidentity.com/v3/basic_kyc/sync', (string) $mock->request(1)->getUri());
+        $request = $mock->request(3);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('https://testapi.smileidentity.com/v3/status/job_01h8x9y2z3', (string) $request->getUri());
+        self::assertTrue($status->isComplete);
+        self::assertSame('clear', $status->status);
+        self::assertSame('job_01h8x9y2z3', $status->jobId);
     }
 
     public function testVerifySyncRaisesOnAuthorityUnavailableAndInternalFailure(): void

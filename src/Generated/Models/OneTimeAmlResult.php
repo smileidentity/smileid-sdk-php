@@ -17,6 +17,7 @@ final class OneTimeAmlResult
      * @param array<string, mixed> $consent
      * @param array<string, mixed>|null $antifraud
      * @param array<string, mixed>|null $deviceSignals
+     * @param string|null $jobId the Smile job id, from the SmileID-Job-ID response header
      */
     public function __construct(
         public readonly string $status,
@@ -34,13 +35,16 @@ final class OneTimeAmlResult
         public readonly array $consent,
         public readonly ?array $antifraud,
         public readonly ?array $deviceSignals,
+        public readonly ?string $jobId = null,
     ) {
     }
 
     /**
      * @param array<string, mixed> $data
+     * @param string|null $jobId the SmileID-Job-ID response header; the body
+     *     carries no job id
      */
-    public static function fromArray(array $data): self
+    public static function fromArray(array $data, ?string $jobId = null): self
     {
         $people = [];
         foreach (is_array($data['people'] ?? null) ? $data['people'] : [] as $person) {
@@ -65,6 +69,7 @@ final class OneTimeAmlResult
             consent: is_array($data['consent'] ?? null) ? $data['consent'] : [],
             antifraud: is_array($data['antifraud'] ?? null) ? $data['antifraud'] : null,
             deviceSignals: is_array($data['device_signals'] ?? null) ? $data['device_signals'] : null,
+            jobId: $jobId,
         );
     }
 }

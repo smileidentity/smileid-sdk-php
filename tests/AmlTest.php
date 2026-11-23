@@ -118,7 +118,7 @@ final class AmlTest extends TestCase
             'antifraud' => ['score' => 1],
             'device_signals' => null,
         ];
-        $mock = new MockClient([MockClient::tokenResponse(), new Response(200, [], (string) json_encode($body))]);
+        $mock = new MockClient([MockClient::tokenResponse(), new Response(200, ['SmileID-Job-ID' => 'job_aml_1'], (string) json_encode($body))]);
 
         $result = $mock->client->aml->oneTimeSync(
             countries: ['NG'],
@@ -150,6 +150,7 @@ final class AmlTest extends TestCase
         self::assertSame(['granted' => true], $result->consent);
         self::assertSame(['score' => 1], $result->antifraud);
         self::assertNull($result->deviceSignals);
+        self::assertSame('job_aml_1', $result->jobId);
     }
 
     public function testOneTimeSyncParsesClearResultWithNulls(): void
@@ -168,11 +169,12 @@ final class AmlTest extends TestCase
         self::assertSame([], $result->userProvidedInfo);
         self::assertSame([], $result->consent);
         self::assertNull($result->antifraud);
+        self::assertNull($result->jobId);
     }
 
     public function testOneTimeSyncRetriesOnlyWithIdempotencyKey(): void
     {
-        $timeout = fn (): Response => new Response(408, [], '{"status":"Request Timeout","message":"slow"}');
+        $timeout = fn (): Response => new Response(408, ['SmileID-Job-ID' => 'job_timed_out'], '{"status":"Request Timeout","message":"slow"}');
 
         $keyed = new MockClient([MockClient::tokenResponse(), $timeout(), new Response(200, [], '{"status":"clear"}')]);
         $result = $keyed->client->aml->oneTimeSync(['NG'], 'John Doe', $this->userDetails(), $this->consent(), idempotencyKey: self::KEY);
@@ -183,8 +185,10 @@ final class AmlTest extends TestCase
         try {
             $unkeyed->client->aml->oneTimeSync(['NG'], 'John Doe', $this->userDetails(), $this->consent());
             self::fail('Expected an error.');
-        } catch (\SmileIdentity\Errors\SmileIDError) {
+        } catch (\SmileIdentity\Errors\SmileIDError $e) {
             self::assertCount(2, $unkeyed->history);
+            self::assertSame(408, $e->statusCode);
+            self::assertSame('job_timed_out', $e->jobId);
         }
     }
 

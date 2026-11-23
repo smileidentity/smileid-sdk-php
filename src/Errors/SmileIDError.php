@@ -14,6 +14,10 @@ namespace SmileIdentity\Errors;
  * $error->code (also via getCode()). It reuses the inherited \Exception::$code
  * slot, which is why it is not a declared readonly property.
  *
+ * $jobId is the Smile job id from the response's SmileID-Job-ID header, or
+ * null when the response had none. Pass it to verifications->retrieve() to
+ * read the job's outcome.
+ *
  * @property-read ?string $code the API error code, e.g. "2413" (services endpoints only)
  */
 class SmileIDError extends \Exception
@@ -26,6 +30,7 @@ class SmileIDError extends \Exception
         public readonly ?string $requestId = null,
         public readonly ?string $rawBody = null,
         ?\Throwable $previous = null,
+        public readonly ?string $jobId = null,
     ) {
         parent::__construct($message, 0, $previous);
         if ($code !== null) {

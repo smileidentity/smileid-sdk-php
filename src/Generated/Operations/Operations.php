@@ -64,10 +64,31 @@ final class Operations
      */
     public static function basicKyc(Transport $transport, array $args, bool $sync): array
     {
+        return $transport->send(self::basicKycRequest($args, $sync));
+    }
+
+    /**
+     * POST /v3/basic_kyc/sync, returning the result and the response headers
+     * (which carry SmileID-Job-ID). Never retried.
+     *
+     * @param EntryArgs $args
+     *
+     * @return array{0: array<string, mixed>, 1: array<string, string>}
+     */
+    public static function basicKycSync(Transport $transport, array $args): array
+    {
+        return $transport->sendWithHeaders(self::basicKycRequest($args, true));
+    }
+
+    /**
+     * @param EntryArgs $args
+     */
+    private static function basicKycRequest(array $args, bool $sync): ApiRequest
+    {
         $parts = self::scalarParts($args, ['country', 'id_type', 'id_number', 'bank_code', 'operator', 'callback_url']);
         $parts = array_merge($parts, self::jsonParts($args));
 
-        return $transport->send(new ApiRequest(
+        return new ApiRequest(
             method: 'POST',
             path: $sync ? '/v3/basic_kyc/sync' : '/v3/basic_kyc',
             product: 'basic_kyc',
@@ -75,7 +96,7 @@ final class Operations
             idempotent: false,
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
-        ));
+        );
     }
 
     /**
@@ -389,6 +410,93 @@ final class Operations
         ?array $metadata,
         ?string $idempotencyKey,
     ): array {
+        return $transport->send(self::oneTimeAmlRequest(
+            $sync,
+            $countries,
+            $fullName,
+            $birthYear,
+            $strictMatch,
+            $aliases,
+            $searchExistingUser,
+            $userId,
+            $userDetails,
+            $consent,
+            $callbackUrl,
+            $partnerParams,
+            $metadata,
+            $idempotencyKey,
+        ));
+    }
+
+    /**
+     * POST /v3/aml/sync, returning the result and the response headers (which
+     * carry SmileID-Job-ID). Retried only with an idempotency key.
+     *
+     * @param list<string> $countries
+     * @param list<string>|null $aliases
+     * @param array<string, mixed> $userDetails
+     * @param array<string, mixed>|null $partnerParams
+     * @param array<int, mixed>|null $metadata
+     *
+     * @return array{0: array<string, mixed>, 1: array<string, string>}
+     */
+    public static function oneTimeAmlSync(
+        Transport $transport,
+        array $countries,
+        string $fullName,
+        ?string $birthYear,
+        ?bool $strictMatch,
+        ?array $aliases,
+        ?bool $searchExistingUser,
+        ?string $userId,
+        array $userDetails,
+        Consent $consent,
+        ?string $callbackUrl,
+        ?array $partnerParams,
+        ?array $metadata,
+        ?string $idempotencyKey,
+    ): array {
+        return $transport->sendWithHeaders(self::oneTimeAmlRequest(
+            true,
+            $countries,
+            $fullName,
+            $birthYear,
+            $strictMatch,
+            $aliases,
+            $searchExistingUser,
+            $userId,
+            $userDetails,
+            $consent,
+            $callbackUrl,
+            $partnerParams,
+            $metadata,
+            $idempotencyKey,
+        ));
+    }
+
+    /**
+     * @param list<string> $countries
+     * @param list<string>|null $aliases
+     * @param array<string, mixed> $userDetails
+     * @param array<string, mixed>|null $partnerParams
+     * @param array<int, mixed>|null $metadata
+     */
+    private static function oneTimeAmlRequest(
+        bool $sync,
+        array $countries,
+        string $fullName,
+        ?string $birthYear,
+        ?bool $strictMatch,
+        ?array $aliases,
+        ?bool $searchExistingUser,
+        ?string $userId,
+        array $userDetails,
+        Consent $consent,
+        ?string $callbackUrl,
+        ?array $partnerParams,
+        ?array $metadata,
+        ?string $idempotencyKey,
+    ): ApiRequest {
         $parts = self::amlParts(
             $countries,
             $fullName,
@@ -404,7 +512,7 @@ final class Operations
             $metadata,
         );
 
-        return $transport->send(new ApiRequest(
+        return new ApiRequest(
             method: 'POST',
             path: $sync ? '/v3/aml/sync' : '/v3/aml',
             authenticated: true,
@@ -413,7 +521,7 @@ final class Operations
             multipart: $parts,
             bodyKind: ApiRequest::BODY_MULTIPART,
             idempotencyKey: $idempotencyKey,
-        ));
+        );
     }
 
     /**

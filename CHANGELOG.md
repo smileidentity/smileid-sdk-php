@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `basicKyc->verify` for `POST /v3/basic_kyc`, and `basicKyc->verifySync` for
   `POST /v3/basic_kyc/sync`, which returns a `BasicKycResult` in the response.
   Both mint their token with the `basic_kyc` product claim (spec v3.1215.0).
+- `SmileIDError::$jobId`, the job ID from the `SmileID-Job-ID` response header,
+  or null when the response has none. It is set on every error raised from an
+  HTTP response. After a 408 or 424 from `basicKyc->verifySync`, or a 500 that
+  has a job ID, read the outcome with `verifications->retrieve($e->jobId)`
+  instead of resubmitting.
+- `BasicKycResult::$jobId` and `OneTimeAmlResult::$jobId`, the job ID from the
+  `SmileID-Job-ID` header of the `basicKyc->verifySync` and `aml->oneTimeSync`
+  responses.
+- `Transport::sendWithHeaders`, `Operations::basicKycSync`,
+  `Operations::oneTimeAmlSync` and `Helpers\JobId::fromHeaders`, which return
+  or read the response headers.
 
 ## [13.1.0] - 2026-11-19
 

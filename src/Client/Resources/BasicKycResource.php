@@ -10,6 +10,7 @@ use SmileIdentity\Consent;
 use SmileIdentity\Generated\Models\AcceptedResponse;
 use SmileIdentity\Generated\Models\BasicKycResult;
 use SmileIdentity\Generated\Operations\Operations;
+use SmileIdentity\Helpers\JobId;
 use SmileIdentity\Helpers\Url;
 use SmileIdentity\Helpers\UserDetails;
 
@@ -54,16 +55,18 @@ final class BasicKycResource
             $operator,
             $partnerParams,
             $metadata,
-        ));
+        )[0]);
     }
 
     /**
-     * Like {@see verify()}, but returns the result in the response. The
-     * client's default callback URL is not used: `callback_url` is sent only
-     * when you pass one. A call that cannot finish raises a SmileIDError (408 or
-     * 424) or an APIError (500). The job may still have run, and resubmitting
-     * runs and bills a second lookup, so don't resubmit automatically. The call
-     * is never retried automatically.
+     * Like {@see verify()}, but returns the result in the response, with the
+     * job id in `jobId`. The client's default callback URL is not used:
+     * `callback_url` is sent only when you pass one. A call that cannot finish
+     * raises a SmileIDError (408 or 424) or an APIError (500). The job may
+     * still have run, and resubmitting runs and bills a second lookup, so don't
+     * resubmit automatically: read the outcome with
+     * `verifications->retrieve($e->jobId)`. A 500 with no `jobId` means the job
+     * was not created. The call is never retried automatically.
      *
      * @param array<string, mixed> $userDetails
      * @param array<string, mixed>|null $partnerParams
@@ -81,7 +84,7 @@ final class BasicKycResource
         ?array $partnerParams = null,
         ?array $metadata = null,
     ): BasicKycResult {
-        return BasicKycResult::fromArray($this->submit(
+        [$data, $headers] = $this->submit(
             true,
             $country,
             $idType,
@@ -93,7 +96,9 @@ final class BasicKycResource
             $operator,
             $partnerParams,
             $metadata,
-        ));
+        );
+
+        return BasicKycResult::fromArray($data, JobId::fromHeaders($headers));
     }
 
     /**
@@ -101,7 +106,8 @@ final class BasicKycResource
      * @param array<string, mixed>|null $partnerParams
      * @param array<int, mixed>|null $metadata
      *
-     * @return array<string, mixed>
+     * @return array{0: array<string, mixed>, 1: array<string, string>} the
+     *     decoded body and the response headers
      */
     private function submit(
         bool $sync,
@@ -119,7 +125,7 @@ final class BasicKycResource
         UserDetails::validate($userDetails);
         Url::requireHttpsCallback($callbackUrl);
 
-        return Operations::basicKyc($this->transport, [
+        $args = [
             'country' => $country,
             'id_type' => $idType,
             'id_number' => $idNumber,
@@ -130,6 +136,10 @@ final class BasicKycResource
             'consent' => $consent,
             'partner_params' => $partnerParams,
             'metadata' => $metadata,
-        ], $sync);
+        ];
+
+        return $sync
+            ? Operations::basicKycSync($this->transport, $args)
+            : [Operations::basicKyc($this->transport, $args, false), []];
     }
 }
