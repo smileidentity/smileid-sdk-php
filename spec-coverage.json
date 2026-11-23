@@ -1,0 +1,156 @@
+{
+  "spec_tag": "v3.1215.0",
+  "operations": {
+    "v3AddressVerification": {
+      "unsupported": "Planned for 13.3.0."
+    },
+    "submitAmlMonitoring": {
+      "method": "client->aml->monitoring",
+      "path": "POST /v3/aml/monitoring"
+    },
+    "getAmlMonitoringNews": {
+      "method": "client->aml->monitoringNews",
+      "path": "GET /v3/aml/monitoring/{job_id}/news/{reference}"
+    },
+    "submitBasicKyc": {
+      "method": "client->basicKyc->verify",
+      "path": "POST /v3/basic_kyc"
+    },
+    "submitBasicKycSync": {
+      "method": "client->basicKyc->verifySync",
+      "path": "POST /v3/basic_kyc/sync",
+      "response_headers": {
+        "Response-Signature": {
+          "unsupported": "BasicKycResult doesn't expose the Response-Signature header, so a caller can't check the response signature."
+        },
+        "Response-Timestamp": {
+          "unsupported": "BasicKycResult doesn't expose the Response-Timestamp header, which is only needed to check the response signature."
+        },
+        "SmileID-Job-ID": "BasicKycResult::$jobId; SmileIDError::$jobId on 408 and 424, and APIError::$jobId on 500",
+        "User-ID": {
+          "unsupported": "BasicKycResult has no user id field, so the User-ID header isn't exposed."
+        }
+      }
+    },
+    "v3BiometricAuthentication": {
+      "method": "client->biometric->authenticate",
+      "path": "POST /v3/authentication"
+    },
+    "v3BiometricEnrollment": {
+      "method": "client->biometric->enroll",
+      "path": "POST /v3/registration"
+    },
+    "v3BiometricKycEntry": {
+      "method": "client->biometricKyc->verify",
+      "path": "POST /v3/biometric_kyc"
+    },
+    "v3DocumentVerificationEntry": {
+      "method": "client->documents->verify",
+      "path": "POST /v3/document_verification"
+    },
+    "v3EnhancedDocumentVerificationEntry": {
+      "method": "client->documents->verifyEnhanced",
+      "path": "POST /v3/enhanced_document_verification"
+    },
+    "submitEnhancedKyc": {
+      "method": "client->enhancedKyc->verify",
+      "path": "POST /v3/enhanced_kyc"
+    },
+    "submitEnhancedKycSync": {
+      "method": "client->enhancedKyc->verifySync",
+      "path": "POST /v3/enhanced_kyc/sync",
+      "response_headers": {
+        "Response-Signature": "EnhancedKycResult::$responseSignature",
+        "Response-Timestamp": "EnhancedKycResult::$responseTimestamp",
+        "SmileID-Job-ID": "EnhancedKycResult::$jobId; SmileIDError::$jobId on 408 and 424, and APIError::$jobId on 500",
+        "User-ID": "EnhancedKycResult::$userId"
+      }
+    },
+    "submitOneTimeAml": {
+      "method": "client->aml->oneTime",
+      "path": "POST /v3/aml"
+    },
+    "submitOneTimeAmlSync": {
+      "method": "client->aml->oneTimeSync",
+      "path": "POST /v3/aml/sync",
+      "response_headers": {
+        "Response-Signature": {
+          "unsupported": "OneTimeAmlResult doesn't expose the Response-Signature header, so a caller can't check the response signature."
+        },
+        "Response-Timestamp": {
+          "unsupported": "OneTimeAmlResult doesn't expose the Response-Timestamp header, which is only needed to check the response signature."
+        },
+        "SmileID-Job-ID": "OneTimeAmlResult::$jobId; SmileIDError::$jobId on 408, and APIError::$jobId on 500",
+        "User-ID": {
+          "unsupported": "OneTimeAmlResult has no user id field, so the User-ID header isn't exposed."
+        }
+      }
+    },
+    "v3PhoneVerification": {
+      "unsupported": "Planned for 13.3.0."
+    },
+    "replayCallback": {
+      "method": "client->verifications->replay",
+      "path": "POST /v3/replay/{job_id}"
+    },
+    "reportUserFraud": {
+      "method": "client->users->reportFraud",
+      "path": "POST /v3/users/{user_id}/report_fraud"
+    },
+    "v3ResidencyDocumentVerificationEntry": {
+      "method": "client->documents->verifyResidency",
+      "path": "POST /v3/residency_document_verification"
+    },
+    "getBankCodes": {
+      "method": "client->services->bankCodes",
+      "path": "GET /v3/services/bank_codes"
+    },
+    "getSupportedIdTypes": {
+      "method": "client->services->supportedIdTypes",
+      "path": "GET /v3/services/supported_id_types"
+    },
+    "getSupportedDocuments": {
+      "method": "client->services->supportedDocuments",
+      "path": "GET /v3/services/supported_documents"
+    },
+    "getIdStatus": {
+      "method": "client->services->idStatus",
+      "path": "GET /v3/services/id_status"
+    },
+    "v3SmartSelfieCompare": {
+      "method": "client->biometric->compare",
+      "path": "POST /v3/compare"
+    },
+    "listSmileLinks": {
+      "unsupported": "Planned for 13.3.0."
+    },
+    "createSmileLink": {
+      "unsupported": "Planned for 13.3.0."
+    },
+    "getSmileLink": {
+      "unsupported": "Planned for 13.3.0."
+    },
+    "updateSmileLink": {
+      "unsupported": "Planned for 13.3.0."
+    },
+    "getV3Token": {
+      "method": "Transport::mintToken",
+      "path": "POST /v3/token"
+    },
+    "getVerificationStatus": {
+      "method": "client->verifications->retrieve",
+      "path": "GET /v3/status/{jobId}",
+      "response_headers": {
+        "api_version": {
+          "unsupported": "The SDK doesn't read this header and JobStatus has no API version field."
+        },
+        "job_id": {
+          "unsupported": "The SDK doesn't read this header. JobStatus::$jobId comes from the job_id field in the response body."
+        },
+        "user_id": {
+          "unsupported": "The SDK doesn't read this header. JobStatus::$userId comes from the user_id field in the response body."
+        }
+      }
+    }
+  }
+}

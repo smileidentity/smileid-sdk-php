@@ -38,6 +38,12 @@ Tests:
 - Every new operation needs a golden fixture test, which checks the exact request body and headers, and tests that parse its responses. Golden fixture tests live in `tests/GoldenFixtureTest.php`; follow the existing cases there. Shared persona cases for integration tests live in the private `smileid-sdk-fixtures` repository.
 - Changed lines must be fully covered by tests. Don't add coverage exclusion comments.
 
+## Spec coverage
+
+`spec-coverage.json` accounts for every public operation in the spec at its `spec_tag`. Each operation names the method a caller uses, such as `client->basicKyc->verifySync`, its path, and where a caller reads each response header the spec declares. Anything the SDK doesn't do is marked `unsupported` with a reason. The `spec-coverage` workflow checks the file against the spec, and `tests/SpecCoverageTest.php` checks it against the code: every method must exist, and the supported paths must be exactly the paths in `src/Generated/Operations/Operations.php` and the token path in `src/Client/Transport.php`.
+
+A change that adds, removes or stops supporting an operation, or starts or stops exposing a response header, must update `spec-coverage.json` in the same pull request. The file is kept out of the Composer package by `.gitattributes`.
+
 ## Running tests
 
 ```bash
