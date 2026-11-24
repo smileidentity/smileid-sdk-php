@@ -1,0 +1,2 @@
+# Kept out of the Composer package (GitHub dist archives honour export-ignore).
+/spec-coverage.json export-ignore
