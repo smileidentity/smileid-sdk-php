@@ -118,7 +118,12 @@ final class AmlTest extends TestCase
             'antifraud' => ['score' => 1],
             'device_signals' => null,
         ];
-        $mock = new MockClient([MockClient::tokenResponse(), new Response(200, ['SmileID-Job-ID' => 'job_aml_1'], (string) json_encode($body))]);
+        $mock = new MockClient([MockClient::tokenResponse(), new Response(200, [
+            'SmileID-Job-ID' => 'job_aml_1',
+            'User-ID' => 'user_aml_1',
+            'Response-Signature' => 'c2lnbmF0dXJl',
+            'Response-Timestamp' => '2026-07-20T12:00:01.000Z',
+        ], (string) json_encode($body))]);
 
         $result = $mock->client->aml->oneTimeSync(
             countries: ['NG'],
@@ -151,6 +156,9 @@ final class AmlTest extends TestCase
         self::assertSame(['score' => 1], $result->antifraud);
         self::assertNull($result->deviceSignals);
         self::assertSame('job_aml_1', $result->jobId);
+        self::assertSame('user_aml_1', $result->userId);
+        self::assertSame('c2lnbmF0dXJl', $result->responseSignature);
+        self::assertSame('2026-07-20T12:00:01.000Z', $result->responseTimestamp);
     }
 
     public function testOneTimeSyncParsesClearResultWithNulls(): void
@@ -168,6 +176,9 @@ final class AmlTest extends TestCase
         self::assertSame([], $result->people);
         self::assertSame([], $result->userProvidedInfo);
         self::assertSame([], $result->consent);
+        self::assertNull($result->userId);
+        self::assertNull($result->responseSignature);
+        self::assertNull($result->responseTimestamp);
         self::assertNull($result->antifraud);
         self::assertNull($result->jobId);
     }

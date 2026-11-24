@@ -121,6 +121,223 @@ final class Operations
     }
 
     /**
+     * POST /v3/phone (Phone Number Verification). user_id is an optional BODY
+     * field here, not the User-ID header.
+     *
+     * @param array<string, mixed> $userDetails
+     * @param array<string, mixed>|null $partnerParams
+     * @param array<int, mixed>|null $metadata
+     *
+     * @return array<string, mixed>
+     */
+    public static function phoneVerification(
+        Transport $transport,
+        string $country,
+        string $phoneNumber,
+        ?string $operator,
+        ?string $idNumber,
+        ?string $userId,
+        array $userDetails,
+        Consent $consent,
+        ?string $callbackUrl,
+        ?array $partnerParams,
+        ?array $metadata,
+    ): array {
+        $parts = self::optionalScalarParts([
+            'country' => $country,
+            'phone_number' => $phoneNumber,
+            'operator' => $operator,
+            'id_number' => $idNumber,
+            'user_id' => $userId,
+            'callback_url' => $callbackUrl,
+        ]);
+        $parts = array_merge($parts, self::jsonParts([
+            'user_details' => $userDetails,
+            'consent' => $consent,
+            'partner_params' => $partnerParams,
+            'metadata' => $metadata,
+        ]));
+
+        return $transport->send(new ApiRequest(
+            method: 'POST',
+            path: '/v3/phone',
+            product: 'phone_number_verification',
+            authenticated: true,
+            idempotent: false,
+            multipart: $parts,
+            bodyKind: ApiRequest::BODY_MULTIPART,
+        ));
+    }
+
+    /**
+     * POST /v3/address (Address Verification). user_id is an optional BODY
+     * field here, not the User-ID header.
+     *
+     * @param array<string, mixed> $userDetails
+     * @param array<string, mixed>|null $partnerParams
+     * @param array<int, mixed>|null $metadata
+     *
+     * @return array<string, mixed>
+     */
+    public static function addressVerification(
+        Transport $transport,
+        string $address,
+        string $country,
+        ?string $idNumber,
+        ?string $utilityNumber,
+        ?string $utilityProvider,
+        ?string $utilityType,
+        ?string $userId,
+        array $userDetails,
+        Consent $consent,
+        ?string $callbackUrl,
+        ?array $partnerParams,
+        ?array $metadata,
+    ): array {
+        $parts = self::optionalScalarParts([
+            'address' => $address,
+            'country' => $country,
+            'id_number' => $idNumber,
+            'utility_number' => $utilityNumber,
+            'utility_provider' => $utilityProvider,
+            'utility_type' => $utilityType,
+            'user_id' => $userId,
+            'callback_url' => $callbackUrl,
+        ]);
+        $parts = array_merge($parts, self::jsonParts([
+            'user_details' => $userDetails,
+            'consent' => $consent,
+            'partner_params' => $partnerParams,
+            'metadata' => $metadata,
+        ]));
+
+        return $transport->send(new ApiRequest(
+            method: 'POST',
+            path: '/v3/address',
+            product: 'address_verification',
+            authenticated: true,
+            idempotent: false,
+            multipart: $parts,
+            bodyKind: ApiRequest::BODY_MULTIPART,
+        ));
+    }
+
+    /**
+     * POST /v3/smile_links. Smile Links tokens carry no product claim.
+     *
+     * @param list<array<string, mixed>> $idTypes
+     * @param array<string, mixed>|null $partnerParams
+     *
+     * @return array<string, mixed>
+     */
+    public static function createSmileLink(
+        Transport $transport,
+        array $idTypes,
+        string $name,
+        string $noticePrivacyPolicyUrl,
+        bool $isSingleUse,
+        ?string $companyName,
+        ?string $callbackUrl,
+        ?string $description,
+        ?string $expiresAt,
+        ?string $logoUrl,
+        ?string $redirectUrl,
+        ?string $themeColor,
+        ?array $partnerParams,
+        ?string $userId,
+    ): array {
+        $parts = [Multipart::json('id_types', $idTypes)];
+        $parts = array_merge($parts, self::optionalScalarParts([
+            'name' => $name,
+            'company_name' => $companyName,
+            'notice_privacy_policy_url' => $noticePrivacyPolicyUrl,
+            'is_single_use' => $isSingleUse,
+            'callback_url' => $callbackUrl,
+            'description' => $description,
+            'expires_at' => $expiresAt,
+            'logo_url' => $logoUrl,
+            'redirect_url' => $redirectUrl,
+            'theme_color' => $themeColor,
+            'user_id' => $userId,
+        ]));
+        if ($partnerParams !== null) {
+            $parts[] = Multipart::json('partner_params', $partnerParams);
+        }
+
+        return $transport->send(new ApiRequest(
+            method: 'POST',
+            path: '/v3/smile_links',
+            authenticated: true,
+            idempotent: false,
+            multipart: $parts,
+            bodyKind: ApiRequest::BODY_MULTIPART,
+        ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function listSmileLinks(Transport $transport, ?int $limit, ?int $page, ?bool $singleUse): array
+    {
+        $query = [];
+        if ($limit !== null) {
+            $query['limit'] = $limit;
+        }
+        if ($page !== null) {
+            $query['page'] = $page;
+        }
+        if ($singleUse !== null) {
+            $query['single_use'] = $singleUse ? 'true' : 'false';
+        }
+
+        return $transport->send(new ApiRequest(
+            method: 'GET',
+            path: '/v3/smile_links',
+            authenticated: true,
+            idempotent: true,
+            query: $query,
+        ));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function getSmileLink(Transport $transport, string $refId): array
+    {
+        return $transport->send(new ApiRequest(
+            method: 'GET',
+            path: '/v3/smile_links/' . rawurlencode($refId),
+            authenticated: true,
+            idempotent: true,
+        ));
+    }
+
+    /**
+     * @param list<array<string, mixed>>|null $idTypes
+     *
+     * @return array<string, mixed>
+     */
+    public static function updateSmileLink(Transport $transport, string $refId, ?array $idTypes, ?bool $isDisabled): array
+    {
+        $parts = [];
+        if ($idTypes !== null) {
+            $parts[] = Multipart::json('id_types', $idTypes);
+        }
+        if ($isDisabled !== null) {
+            $parts[] = Multipart::scalar('is_disabled', $isDisabled);
+        }
+
+        return $transport->send(new ApiRequest(
+            method: 'PUT',
+            path: '/v3/smile_links/' . rawurlencode($refId),
+            authenticated: true,
+            idempotent: true,
+            multipart: $parts,
+            bodyKind: ApiRequest::BODY_MULTIPART,
+        ));
+    }
+
+    /**
      * @param EntryArgs $args
      *
      * @return array<string, mixed>
@@ -674,6 +891,25 @@ final class Operations
             'partner_params' => $partnerParams,
             'metadata' => $metadata,
         ]));
+    }
+
+    /**
+     * Plain text parts for the values that are not null, in the order given.
+     *
+     * @param array<string, bool|int|float|string|null> $values wire name => value
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function optionalScalarParts(array $values): array
+    {
+        $parts = [];
+        foreach ($values as $name => $value) {
+            if ($value !== null) {
+                $parts[] = Multipart::scalar($name, $value);
+            }
+        }
+
+        return $parts;
     }
 
     /**

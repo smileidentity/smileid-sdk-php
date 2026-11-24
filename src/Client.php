@@ -7,13 +7,16 @@ namespace SmileIdentity;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\ClientInterface;
 use SmileIdentity\Client\Config;
+use SmileIdentity\Client\Resources\AddressResource;
 use SmileIdentity\Client\Resources\AmlResource;
 use SmileIdentity\Client\Resources\BasicKycResource;
 use SmileIdentity\Client\Resources\BiometricKycResource;
 use SmileIdentity\Client\Resources\BiometricResource;
 use SmileIdentity\Client\Resources\DocumentsResource;
 use SmileIdentity\Client\Resources\EnhancedKycResource;
+use SmileIdentity\Client\Resources\PhoneResource;
 use SmileIdentity\Client\Resources\ServicesResource;
+use SmileIdentity\Client\Resources\SmileLinksResource;
 use SmileIdentity\Client\Resources\UsersResource;
 use SmileIdentity\Client\Resources\VerificationsResource;
 use SmileIdentity\Client\Transport;
@@ -38,6 +41,9 @@ final class Client
     public readonly UsersResource $users;
     public readonly ServicesResource $services;
     public readonly AmlResource $aml;
+    public readonly PhoneResource $phone;
+    public readonly AddressResource $address;
+    public readonly SmileLinksResource $smileLinks;
 
     /**
      * @param 'sandbox'|'production'|string $environment
@@ -80,5 +86,8 @@ final class Client
         $this->users = new UsersResource($this->transport);
         $this->services = new ServicesResource($this->transport);
         $this->aml = new AmlResource($this->transport, $this->config);
+        $this->phone = new PhoneResource($this->transport, $this->config);
+        $this->address = new AddressResource($this->transport, $this->config);
+        $this->smileLinks = new SmileLinksResource($this->transport, $this->config);
     }
 }

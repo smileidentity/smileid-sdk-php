@@ -180,6 +180,9 @@ $result = $smile->basicKyc->verifySync(
 $result->status;                      // "clear", "attention", "block" or "error"
 $result->matchResults['overall'] ?? null; // "exact_match", or null when there are no match results
 $result->jobId;                       // "job_..."
+$result->userId;                      // "user_...", from the User-ID header
+$result->responseSignature;           // the Response-Signature header, or null
+$result->responseTimestamp;           // the Response-Timestamp header, or null
 ```
 
 ```php
@@ -429,6 +432,9 @@ $result = $smile->aml->oneTimeSync(
 $result->status;            // "clear", "attention", "block" or "error"
 $result->noOfPersonsFound;  // 0
 $result->jobId;             // "job_..."
+$result->userId;            // "user_...", from the User-ID header
+$result->responseSignature; // the Response-Signature header, or null
+$result->responseTimestamp; // the Response-Timestamp header, or null
 ```
 
 `monitoring` screens a name and enrols it for ongoing monitoring. `monitoringNews` reads the adverse-media articles for one person in a monitoring job.
@@ -449,6 +455,61 @@ $news = $smile->aml->monitoringNews(
     limit: 25,
 );
 ```
+
+### Phone number verification
+
+Check who a mobile number is registered to, and how well that matches the names you supply. `phoneNumber` is the number to check, in E.164 format. `userDetails` holds the consumer's own details, which are never the number checked. Kenya requires `idNumber`, and Ghana requires `operator` (`MTN`, `VODAFONE` or `AIRTELTIGO`). The result goes to your callback URL.
+
+```php
+$accepted = $smile->phone->verify(
+    country: 'NG',
+    phoneNumber: '+2348012345678',
+    userDetails: $userDetails,
+    consent: $consent,
+);
+```
+
+### Address verification
+
+Check an address against the address on record with a data provider, in Nigeria (`NG`) or South Africa (`ZA`). Send `idNumber` or `utilityNumber`. Nigeria needs `utilityNumber`, `utilityProvider` and `utilityType` (`PrePaid` or `PostPaid`). South Africa needs `idNumber`. The result goes to your callback URL.
+
+```php
+$accepted = $smile->address->verify(
+    address: '12 Test Road, Testville',
+    country: 'NG',
+    userDetails: $userDetails,
+    consent: $consent,
+    utilityNumber: '0123456789',
+    utilityProvider: 'IKEDC',
+    utilityType: 'PrePaid',
+);
+```
+
+### Smile Links
+
+A Smile Link is a URL you give to end users. Opening it runs a verification flow and creates a job for you. `idTypes` lists the verification configurations, each with the wire keys `country`, `id_type` and `verification_method`. The calls are synchronous and use a token with no product claim.
+
+```php
+$idTypes = [['country' => 'NG', 'id_type' => 'NIN', 'verification_method' => 'enhanced_kyc']];
+
+$created = $smile->smileLinks->create(
+    idTypes: $idTypes,
+    name: 'Onboarding',
+    noticePrivacyPolicyUrl: 'https://example.com/privacy',
+    isSingleUse: false,
+);
+$created->link;  // "https://links.usesmileid.com/v3/..."
+$created->refId;
+
+$link = $smile->smileLinks->get($created->refId);
+$link = $smile->smileLinks->update($created->refId, isDisabled: true);
+
+$page = $smile->smileLinks->list(limit: 20, page: 1, singleUse: false);
+$page->links[0]->jobStats?->totalJobs;
+$page->totalPages;
+```
+
+`update` takes `idTypes`, `isDisabled` or both. Nothing else on a link can change after it is created.
 
 ## Error handling
 
