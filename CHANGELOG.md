@@ -20,6 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BasicKycResult::$jobId` and `OneTimeAmlResult::$jobId`, the job ID from the
   `SmileID-Job-ID` header of the `basicKyc->verifySync` and `aml->oneTimeSync`
   responses.
+- `enhancedKyc->verifySync` for `POST /v3/enhanced_kyc/sync`, which takes the
+  same arguments as `enhancedKyc->verify` and returns an `EnhancedKycResult`:
+  the callback payload, with typed `status`, `message`, `reason`, `jobId`,
+  `userId` and `kycReceipt`, and the whole body in `data`. `jobId` comes from
+  the `SmileID-Job-ID` header, or the body's `job_id` when the header is
+  absent, and `userId` from the `User-ID` header, or the body's `user_id`.
+  `responseSignature` and `responseTimestamp` carry the `Response-Signature`
+  and `Response-Timestamp` headers for your own webhook signature check. It is never retried. After a 408 or 424, or a 500 that has a job
+  ID, read the outcome with `verifications->retrieve($e->jobId)` instead of
+  resubmitting. Also adds `Operations::enhancedKycSync` and
+  `Helpers\ResponseHeader::get`.
 - `Transport::sendWithHeaders`, `Operations::basicKycSync`,
   `Operations::oneTimeAmlSync` and `Helpers\JobId::fromHeaders`, which return
   or read the response headers.

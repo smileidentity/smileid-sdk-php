@@ -12,6 +12,7 @@ use SmileIdentity\Consent;
 use SmileIdentity\Errors\APIError;
 use SmileIdentity\Errors\ConflictError;
 use SmileIdentity\Errors\ConnectionError;
+use SmileIdentity\Errors\SmileIDError;
 use SmileIdentity\Tests\Support\MockClient;
 
 /**
@@ -142,6 +143,34 @@ final class RetryPolicyTest extends TestCase
         // Exactly one POST attempt after the token fetch — no retry.
         self::assertCount(2, $mock->history);
         self::assertSame([], $mock->sleeps);
+    }
+
+    /** Sync submissions are never retried on 408, 424 or 500: the job may have run. */
+    public function testSyncEntryPostsAreNeverRetried(): void
+    {
+        $calls = [
+            'basicKyc->verifySync' => fn (MockClient $mock) => $mock->client->basicKyc->verifySync(...$this->entryArgs()),
+            'enhancedKyc->verifySync' => fn (MockClient $mock) => $mock->client->enhancedKyc->verifySync(...$this->entryArgs()),
+        ];
+        foreach ($calls as $label => $call) {
+            foreach ([408, 424, 500] as $status) {
+                $mock = new MockClient([
+                    MockClient::tokenResponse(),
+                    new Response($status, ['SmileID-Job-ID' => 'job_1'], '{"status":"x","message":"failed"}'),
+                ]);
+
+                try {
+                    $call($mock);
+                    self::fail("Expected an error from $label on $status");
+                } catch (SmileIDError $e) {
+                    self::assertSame($status, $e->statusCode, $label);
+                    self::assertSame('job_1', $e->jobId, $label);
+                }
+
+                self::assertCount(2, $mock->history, "$label retried on $status");
+                self::assertSame([], $mock->sleeps, $label);
+            }
+        }
     }
 
     public function testEntryPostConnectionErrorSurfacesWithoutRetry(): void

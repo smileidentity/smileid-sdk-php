@@ -100,6 +100,72 @@ final class GoldenFixtureTest extends TestCase
         self::assertTrue($accepted->isAccepted);
     }
 
+    public function testEnhancedKycSyncGoldenRequest(): void
+    {
+        $mock = new MockClient(
+            [
+                MockClient::tokenResponse(),
+                new Response(200, ['SmileID-Job-ID' => 'job_01h8x9y2z3a4b5c6d7e8f9g0h1'], '{"status":"clear","message":"Verification successful"}'),
+            ],
+            ['defaultCallbackUrl' => 'https://app.example.com/cb'],
+        );
+
+        $mock->client->enhancedKyc->verifySync(
+            country: 'NG',
+            idType: 'NIN',
+            idNumber: '12345678901',
+            userDetails: $this->userDetails(),
+            consent: $this->consent(),
+            bankCode: '044',
+            operator: 'mtn',
+            partnerParams: ['order_id' => 'ORD-12345'],
+            metadata: [['name' => 'a', 'value' => 'b']],
+            userId: 'user_01h8x9y2z3a4b5c6d7e8f9g0h1',
+        );
+
+        self::assertCount(2, $mock->history);
+        $request = $mock->request(1);
+        self::assertSame('POST', $request->getMethod());
+        self::assertSame('https://testapi.smileidentity.com/v3/enhanced_kyc/sync', (string) $request->getUri());
+
+        self::assertNotSame('', $request->getHeaderLine('SmileID-Token'));
+        self::assertSame('php', $request->getHeaderLine('SmileID-Source-SDK'));
+        self::assertSame(Version::VERSION, $request->getHeaderLine('SmileID-Source-SDK-Version'));
+        self::assertStringStartsWith('smileid-sdk-php/' . Version::VERSION . ' (php/', $request->getHeaderLine('User-Agent'));
+        self::assertSame('user_01h8x9y2z3a4b5c6d7e8f9g0h1', $request->getHeaderLine('User-ID'));
+        self::assertFalse($request->hasHeader('SmileID-Partner-ID'));
+        self::assertFalse($request->hasHeader('SmileID-Idempotency-Key'));
+        self::assertStringStartsWith('multipart/form-data; boundary=', $request->getHeaderLine('Content-Type'));
+
+        $parts = MultipartParser::parse($request);
+        self::assertSame(
+            ['country', 'id_type', 'id_number', 'bank_code', 'operator', 'user_details', 'consent', 'partner_params', 'metadata'],
+            array_column($parts, 'name'),
+        );
+        foreach (['country' => 'NG', 'id_type' => 'NIN', 'id_number' => '12345678901', 'bank_code' => '044', 'operator' => 'mtn'] as $name => $value) {
+            $part = MultipartParser::named($parts, $name)[0];
+            self::assertSame($value, $part['body'], $name);
+            self::assertNull($part['contentType'], $name);
+        }
+        $json = [
+            'user_details' => '{"given_names":"John","last_name":"Doe","email":"john@example.com"}',
+            'consent' => '{"granted":true,"granted_at":"2026-03-06T12:00:00.000Z","notice_language":"EN","notice_privacy_policy_url":"https://example.com/privacy"}',
+            'partner_params' => '{"order_id":"ORD-12345"}',
+            'metadata' => '[{"name":"a","value":"b"}]',
+        ];
+        foreach ($json as $name => $body) {
+            $part = MultipartParser::named($parts, $name)[0];
+            self::assertSame('application/json', $part['contentType'], $name);
+            self::assertSame($body, $part['body'], $name);
+        }
+        // The client's default callback URL is never sent on the sync call.
+        self::assertCount(0, MultipartParser::named($parts, 'callback_url'));
+
+        // The token is minted with the enhanced_kyc product claim.
+        $product = MultipartParser::named(MultipartParser::parse($mock->request(0)), 'product');
+        self::assertSame(['enhanced_kyc'], array_column($product, 'body'));
+    }
+
     public function testDocumentVerificationGoldenRequest(): void
     {
         $mock = new MockClient([MockClient::tokenResponse(), MockClient::acceptedResponse('accepted')]);
