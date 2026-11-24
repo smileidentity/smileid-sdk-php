@@ -142,13 +142,16 @@
       "path": "GET /v3/status/{jobId}",
       "response_headers": {
         "api_version": {
-          "unsupported": "The SDK doesn't read this header and JobStatus has no API version field."
+          "unsupported": "The SDK doesn't read the api_version header. It is lambda's deployed version, a diagnostic value the spec declares only on this operation.",
+          "backfill": false
         },
         "job_id": {
-          "unsupported": "The SDK doesn't read this header. JobStatus::$jobId comes from the job_id field in the response body."
+          "unsupported": "The SDK doesn't read this header. JobStatus::$jobId comes from the job_id field in the response body.",
+          "backfill": false
         },
         "user_id": {
-          "unsupported": "The SDK doesn't read this header. JobStatus::$userId comes from the user_id field in the response body."
+          "unsupported": "The SDK doesn't read this header. JobStatus::$userId comes from the user_id field in the response body.",
+          "backfill": false
         }
       }
     }
