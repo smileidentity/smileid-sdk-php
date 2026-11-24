@@ -57,7 +57,14 @@
       "path": "POST /v3/enhanced_kyc"
     },
     "submitEnhancedKycSync": {
-      "unsupported": "Added by the Enhanced KYC sync pull request, #48."
+      "method": "client->enhancedKyc->verifySync",
+      "path": "POST /v3/enhanced_kyc/sync",
+      "response_headers": {
+        "Response-Signature": "EnhancedKycResult::$responseSignature",
+        "Response-Timestamp": "EnhancedKycResult::$responseTimestamp",
+        "SmileID-Job-ID": "EnhancedKycResult::$jobId; SmileIDError::$jobId on 408 and 424, and APIError::$jobId on 500",
+        "User-ID": "EnhancedKycResult::$userId"
+      }
     },
     "submitOneTimeAml": {
       "method": "client->aml->oneTime",
