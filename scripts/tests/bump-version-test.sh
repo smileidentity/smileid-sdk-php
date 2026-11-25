@@ -92,6 +92,43 @@ for case in "major 13.0.0" "minor 12.3.0" "patch 12.2.1"; do
   grep -qF "\"smileid/usesmileid\": \"$2\"" "$dir/example/composer.json" && pass "$1 updates example/composer.json" || fail "$1 did not update example/composer.json"
 done
 
+# --- An exact version is used as given ---------------------------------------
+
+for case in "13.3.0 13.1.0" "13.1.1 13.1.0" "14.0.0 13.1.0" "13.10.0 13.9.5"; do
+  # shellcheck disable=SC2086 # split "target current" into $1 and $2
+  set -- $case
+  dir="$WORK/exact-$1-from-$2"
+  make_tree "$dir" "$2" $'### Fixed\n\n- A fix.'
+  if out=$(run_bump "$dir" "$1") && [ "$out" = "$1" ]; then
+    pass "exact $2 -> $1 prints $1"
+  else
+    fail "exact $2 -> $1 printed '${out:-}' (expected $1)"
+  fi
+  grep -qF "public const VERSION = '$1';" "$dir/src/Version.php" && pass "exact $1 updates src/Version.php" || fail "exact $1 did not update src/Version.php"
+  grep -qF "assertSame('$1', Version::VERSION)" "$dir/tests/VersionTest.php" && pass "exact $1 updates tests/VersionTest.php" || fail "exact $1 did not update tests/VersionTest.php"
+  grep -qF "\"smileid/usesmileid\": \"$1\"" "$dir/example/composer.json" && pass "exact $1 updates example/composer.json" || fail "exact $1 did not update example/composer.json"
+  grep -qxF "## [$1] - 2026-11-09" "$dir/CHANGELOG.md" && pass "exact $1 adds a dated changelog heading" || fail "exact $1 did not add a dated changelog heading"
+  grep -qxF "[$1]: https://github.com/smileidentity/smileid-sdk-php/compare/v$2...v$1" "$dir/CHANGELOG.md" && pass "exact $1 adds a compare link from v$2" || fail "exact $1 did not add a compare link from v$2"
+done
+
+# Not greater than the current version, or not plain X.Y.Z: fail, change nothing.
+for target in 13.2.0 13.1.9 12.9.9 13.2.0-rc.1 v13.3.0 13.3 13.3.0.0 013.3.0 13.03.0 ""; do
+  dir="$WORK/exact-bad-${target:-empty}"
+  make_tree "$dir" 13.2.0 '- Something.'
+  before=$(cat "$dir/src/Version.php" "$dir/tests/VersionTest.php" "$dir/example/composer.json" "$dir/CHANGELOG.md")
+  if run_bump "$dir" "$target" >/dev/null 2>"$WORK/err"; then
+    fail "accepted exact version '$target' from 13.2.0"
+  else
+    case "$target" in
+      13.2.0 | 13.1.9 | 12.9.9) want="not greater than the current version" ;;
+      *) want="expected major, minor, patch or a plain X.Y.Z version" ;;
+    esac
+    grep -qF "$want" "$WORK/err" && pass "rejects exact version '$target' ($want)" || fail "rejected '$target' with an unexpected message: $(cat "$WORK/err")"
+  fi
+  [ "$before" = "$(cat "$dir/src/Version.php" "$dir/tests/VersionTest.php" "$dir/example/composer.json" "$dir/CHANGELOG.md")" ] \
+    && pass "rejected '$target' leaves files unchanged" || fail "rejected '$target' changed files"
+done
+
 # --- Changelog shape --------------------------------------------------------
 
 dir="$WORK/changelog"
