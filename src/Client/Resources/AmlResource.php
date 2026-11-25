@@ -149,7 +149,7 @@ final class AmlResource
             $idempotencyKey,
         );
 
-        return OneTimeAmlResult::fromArray($data, JobId::fromHeaders($headers));
+        return OneTimeAmlResult::fromArray($data, JobId::fromHeaders($headers), $headers);
     }
 
     /**

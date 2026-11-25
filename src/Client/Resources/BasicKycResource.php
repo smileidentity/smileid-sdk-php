@@ -98,7 +98,7 @@ final class BasicKycResource
             $metadata,
         );
 
-        return BasicKycResult::fromArray($data, JobId::fromHeaders($headers));
+        return BasicKycResult::fromArray($data, JobId::fromHeaders($headers), $headers);
     }
 
     /**

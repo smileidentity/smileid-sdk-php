@@ -149,7 +149,12 @@ final class BasicKycTest extends TestCase
             'kyc_receipt' => 'https://portal.usesmileid.com/receipt',
         ];
         $mock = new MockClient(
-            [MockClient::tokenResponse(), new Response(200, ['SmileID-Job-ID' => 'job_1'], (string) json_encode($body))],
+            [MockClient::tokenResponse(), new Response(200, [
+                'SmileID-Job-ID' => 'job_1',
+                'User-ID' => 'user_1',
+                'Response-Signature' => 'c2lnbmF0dXJl',
+                'Response-Timestamp' => '2026-03-10T12:00:04.000Z',
+            ], (string) json_encode($body))],
             ['defaultCallbackUrl' => 'https://app.example.com/cb'],
         );
 
@@ -189,6 +194,20 @@ final class BasicKycTest extends TestCase
         self::assertSame(['ip' => '1.2.3.4'], $result->deviceSignals);
         self::assertSame('https://portal.usesmileid.com/receipt', $result->kycReceipt);
         self::assertSame('job_1', $result->jobId);
+        self::assertSame('user_1', $result->userId);
+        self::assertSame('c2lnbmF0dXJl', $result->responseSignature);
+        self::assertSame('2026-03-10T12:00:04.000Z', $result->responseTimestamp);
+    }
+
+    public function testVerifySyncLeavesAbsentOrBlankSignatureHeadersNull(): void
+    {
+        $mock = new MockClient([MockClient::tokenResponse(), new Response(200, ['User-ID' => ' ', 'Response-Signature' => ''], '{"status":"clear"}')]);
+
+        $result = $mock->client->basicKyc->verifySync('NG', 'NIN', '1', $this->userDetails(), $this->consent());
+
+        self::assertNull($result->userId);
+        self::assertNull($result->responseSignature);
+        self::assertNull($result->responseTimestamp);
     }
 
     public function testVerifySyncSendsCallbackUrlOnlyWhenPassed(): void

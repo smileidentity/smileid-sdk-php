@@ -2,7 +2,8 @@
   "spec_tag": "v3.1215.0",
   "operations": {
     "v3AddressVerification": {
-      "unsupported": "Planned for 13.3.0."
+      "method": "client->address->verify",
+      "path": "POST /v3/address"
     },
     "submitAmlMonitoring": {
       "method": "client->aml->monitoring",
@@ -20,16 +21,10 @@
       "method": "client->basicKyc->verifySync",
       "path": "POST /v3/basic_kyc/sync",
       "response_headers": {
-        "Response-Signature": {
-          "unsupported": "BasicKycResult doesn't expose the Response-Signature header, so a caller can't check the response signature."
-        },
-        "Response-Timestamp": {
-          "unsupported": "BasicKycResult doesn't expose the Response-Timestamp header, which is only needed to check the response signature."
-        },
+        "Response-Signature": "BasicKycResult::$responseSignature",
+        "Response-Timestamp": "BasicKycResult::$responseTimestamp",
         "SmileID-Job-ID": "BasicKycResult::$jobId; SmileIDError::$jobId on 408 and 424, and APIError::$jobId on 500",
-        "User-ID": {
-          "unsupported": "BasicKycResult has no user id field, so the User-ID header isn't exposed."
-        }
+        "User-ID": "BasicKycResult::$userId"
       }
     },
     "v3BiometricAuthentication": {
@@ -74,20 +69,15 @@
       "method": "client->aml->oneTimeSync",
       "path": "POST /v3/aml/sync",
       "response_headers": {
-        "Response-Signature": {
-          "unsupported": "OneTimeAmlResult doesn't expose the Response-Signature header, so a caller can't check the response signature."
-        },
-        "Response-Timestamp": {
-          "unsupported": "OneTimeAmlResult doesn't expose the Response-Timestamp header, which is only needed to check the response signature."
-        },
+        "Response-Signature": "OneTimeAmlResult::$responseSignature",
+        "Response-Timestamp": "OneTimeAmlResult::$responseTimestamp",
         "SmileID-Job-ID": "OneTimeAmlResult::$jobId; SmileIDError::$jobId on 408, and APIError::$jobId on 500",
-        "User-ID": {
-          "unsupported": "OneTimeAmlResult has no user id field, so the User-ID header isn't exposed."
-        }
+        "User-ID": "OneTimeAmlResult::$userId"
       }
     },
     "v3PhoneVerification": {
-      "unsupported": "Planned for 13.3.0."
+      "method": "client->phone->verify",
+      "path": "POST /v3/phone"
     },
     "replayCallback": {
       "method": "client->verifications->replay",
@@ -122,16 +112,20 @@
       "path": "POST /v3/compare"
     },
     "listSmileLinks": {
-      "unsupported": "Planned for 13.3.0."
+      "method": "client->smileLinks->list",
+      "path": "GET /v3/smile_links"
     },
     "createSmileLink": {
-      "unsupported": "Planned for 13.3.0."
+      "method": "client->smileLinks->create",
+      "path": "POST /v3/smile_links"
     },
     "getSmileLink": {
-      "unsupported": "Planned for 13.3.0."
+      "method": "client->smileLinks->get",
+      "path": "GET /v3/smile_links/{refId}"
     },
     "updateSmileLink": {
-      "unsupported": "Planned for 13.3.0."
+      "method": "client->smileLinks->update",
+      "path": "PUT /v3/smile_links/{refId}"
     },
     "getV3Token": {
       "method": "Transport::mintToken",

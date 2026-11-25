@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `phone->verify` for `POST /v3/phone`, with the `phone_number_verification`
+  token product (spec v3.1215.0).
+- `address->verify` for `POST /v3/address`, with the `address_verification`
+  token product.
+- `smileLinks->create`, `smileLinks->list`, `smileLinks->get` and
+  `smileLinks->update` for `POST /v3/smile_links`, `GET /v3/smile_links`,
+  `GET /v3/smile_links/{refId}` and `PUT /v3/smile_links/{refId}`, returning
+  `SmileLinkCreated`, `SmileLinkListResponse` and `SmileLink` models. Their
+  tokens carry no product claim.
+- `BasicKycResult` and `OneTimeAmlResult` now carry `userId`,
+  `responseSignature` and `responseTimestamp`, read from the `User-ID`,
+  `Response-Signature` and `Response-Timestamp` headers of the sync responses.
+
 ## [13.2.0] - 2026-11-24
 
 ### Added

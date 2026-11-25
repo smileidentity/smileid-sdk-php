@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SmileIdentity\Generated\Models;
 
+use SmileIdentity\Helpers\ResponseHeader;
+
 /**
  * HTTP 200 response from POST /v3/basic_kyc/sync: the verification result,
  * identical to the payload the async Basic KYC callback delivers. It reports
@@ -22,6 +24,11 @@ final class BasicKycResult
      * @param array<string, mixed>|null $antifraud
      * @param array<string, mixed>|null $deviceSignals
      * @param string|null $jobId the Smile job id, from the SmileID-Job-ID response header
+     * @param string|null $userId from the User-ID response header
+     * @param string|null $responseSignature the Response-Signature header, for
+     *     your own signature check
+     * @param string|null $responseTimestamp the Response-Timestamp header the
+     *     signature was computed against
      */
     public function __construct(
         public readonly string $status,
@@ -38,6 +45,9 @@ final class BasicKycResult
         public readonly ?array $deviceSignals,
         public readonly ?string $kycReceipt,
         public readonly ?string $jobId = null,
+        public readonly ?string $userId = null,
+        public readonly ?string $responseSignature = null,
+        public readonly ?string $responseTimestamp = null,
     ) {
     }
 
@@ -45,8 +55,10 @@ final class BasicKycResult
      * @param array<string, mixed> $data
      * @param string|null $jobId the SmileID-Job-ID response header; the body
      *     carries no job id
+     * @param array<string, string> $headers the response headers; names are
+     *     matched case-insensitively and blank values count as absent
      */
-    public static function fromArray(array $data, ?string $jobId = null): self
+    public static function fromArray(array $data, ?string $jobId = null, array $headers = []): self
     {
         return new self(
             status: (string) ($data['status'] ?? ''),
@@ -63,6 +75,9 @@ final class BasicKycResult
             deviceSignals: is_array($data['device_signals'] ?? null) ? $data['device_signals'] : null,
             kycReceipt: isset($data['kyc_receipt']) ? (string) $data['kyc_receipt'] : null,
             jobId: $jobId,
+            userId: ResponseHeader::get($headers, 'User-ID'),
+            responseSignature: ResponseHeader::get($headers, 'Response-Signature'),
+            responseTimestamp: ResponseHeader::get($headers, 'Response-Timestamp'),
         );
     }
 }
