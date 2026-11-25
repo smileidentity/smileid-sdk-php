@@ -2,7 +2,11 @@
 #
 # Bump the SDK version and cut the changelog's Unreleased section.
 #
-# Usage: scripts/bump-version.sh <major|minor|patch>
+# Usage: scripts/bump-version.sh <major|minor|patch|X.Y.Z>
+#
+# Pass a part to bump it, or an exact X.Y.Z version (plain digits, strictly
+# greater than the current version) to jump to it, for example when all SDKs
+# release at one shared version.
 #
 # Updates:
 #   - src/Version.php           (release.yml checks the tag against this)
@@ -25,11 +29,15 @@ die() {
   exit 1
 }
 
-[ $# -eq 1 ] || die "usage: scripts/bump-version.sh <major|minor|patch>"
+[ $# -eq 1 ] || die "usage: scripts/bump-version.sh <major|minor|patch|X.Y.Z>"
 PART="$1"
 case "$PART" in
   major | minor | patch) ;;
-  *) die "unknown part '$PART'; expected major, minor or patch" ;;
+  *)
+    # [[ =~ ]] matches the whole argument; grep would pass one with a newline in it.
+    [[ "$PART" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] \
+      || die "unknown part or version '$PART'; expected major, minor, patch or a plain X.Y.Z version"
+    ;;
 esac
 
 ROOT="${BUMP_VERSION_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
@@ -59,6 +67,19 @@ case "$PART" in
   major) NEW="$((MAJOR + 1)).0.0" ;;
   minor) NEW="$MAJOR.$((MINOR + 1)).0" ;;
   patch) NEW="$MAJOR.$MINOR.$((PATCH + 1))" ;;
+  *)
+    NEW="$PART"
+    IFS=. read -r NEW_MAJOR NEW_MINOR NEW_PATCH <<EOF
+$NEW
+EOF
+    if [ "$NEW_MAJOR" -gt "$MAJOR" ] \
+      || { [ "$NEW_MAJOR" -eq "$MAJOR" ] && [ "$NEW_MINOR" -gt "$MINOR" ]; } \
+      || { [ "$NEW_MAJOR" -eq "$MAJOR" ] && [ "$NEW_MINOR" -eq "$MINOR" ] && [ "$NEW_PATCH" -gt "$PATCH" ]; }; then
+      :
+    else
+      die "version $NEW is not greater than the current version $CURRENT"
+    fi
+    ;;
 esac
 
 # --- Validate every file before writing any of them ------------------------
