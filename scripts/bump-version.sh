@@ -34,7 +34,8 @@ PART="$1"
 case "$PART" in
   major | minor | patch) ;;
   *)
-    printf '%s\n' "$PART" | grep -Eqx '(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)' \
+    # [[ =~ ]] matches the whole argument; grep would pass one with a newline in it.
+    [[ "$PART" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] \
       || die "unknown part or version '$PART'; expected major, minor, patch or a plain X.Y.Z version"
     ;;
 esac

@@ -129,6 +129,18 @@ for target in 13.2.0 13.1.9 12.9.9 13.2.0-rc.1 v13.3.0 13.3 13.3.0.0 013.3.0 13.
     && pass "rejected '$target' leaves files unchanged" || fail "rejected '$target' changed files"
 done
 
+# A version with a newline in it must fail too: grep would match its first line.
+dir="$WORK/exact-bad-newline"
+make_tree "$dir" 13.2.0 '- Something.'
+before=$(cat "$dir/src/Version.php" "$dir/tests/VersionTest.php" "$dir/example/composer.json" "$dir/CHANGELOG.md")
+if run_bump "$dir" $'13.3.0\nfoo' >/dev/null 2>&1; then
+  fail "accepted an exact version with a newline in it"
+else
+  pass "rejects an exact version with a newline in it"
+fi
+[ "$before" = "$(cat "$dir/src/Version.php" "$dir/tests/VersionTest.php" "$dir/example/composer.json" "$dir/CHANGELOG.md")" ] \
+  && pass "rejected newline version leaves files unchanged" || fail "rejected newline version changed files"
+
 # --- Changelog shape --------------------------------------------------------
 
 dir="$WORK/changelog"
